@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User account information and roles",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "employee"] }
+      },
+      "required": ["email", "role"]
+    },
+    "employees": {
+      "title": "Employee",
+      "description": "Employee profile for the digital card",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "designation": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photo": { "type": "string" },
+        "about": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["user_id", "name", "slug", "status"]
+    },
+    "links": {
+      "title": "Link",
+      "description": "Social media and other external links",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string" },
+        "type": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "required": ["employee_id", "type", "url"]
+    },
+    "resources": {
+      "title": "Resource",
+      "description": "PDFs and videos uploaded by employees",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string" },
+        "type": { "type": "string", "enum": ["pdf", "video"] },
+        "file_url": { "type": "string" },
+        "title": { "type": "string" }
+      },
+      "required": ["employee_id", "type", "file_url"]
+    },
+    "products": {
+      "title": "Product",
+      "description": "Products or services offered by the employee",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" }
+      },
+      "required": ["employee_id", "name"]
+    },
+    "leads": {
+      "title": "Lead",
+      "description": "Inquiries captured from the digital card",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["employee_id", "name", "timestamp"]
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Tracking events for digital cards",
+      "type": "object",
+      "properties": {
+        "employee_id": { "type": "string" },
+        "event_type": { "type": "string", "enum": ["view", "click", "share"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["employee_id", "event_type", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User documents"
+    },
+    "/employees/{employeeId}": {
+      "schema": "employees",
+      "description": "Employee profiles"
+    },
+    "/links/{linkId}": {
+      "schema": "links",
+      "description": "Social links"
+    },
+    "/resources/{resourceId}": {
+      "schema": "resources",
+      "description": "Uploaded resources"
+    },
+    "/products/{productId}": {
+      "schema": "products",
+      "description": "Product items"
+    },
+    "/leads/{leadId}": {
+      "schema": "leads",
+      "description": "Inquiry leads"
+    },
+    "/analytics/{eventId}": {
+      "schema": "analytics",
+      "description": "Analytics events"
+    }
+  }
+}

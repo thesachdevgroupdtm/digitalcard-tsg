@@ -1,0 +1,212 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Fields:
+//   - email: string (required)
+//   - role: string (required, 'admin' or 'employee')
+//
+// Collection: employees
+// Fields:
+//   - user_id: string (required)
+//   - name: string (required)
+//   - slug: string (required, unique)
+//   - designation: string
+//   - phone: string
+//   - email: string
+//   - photo: string
+//   - about: string
+//   - status: string (required, 'active' or 'inactive')
+//
+// Collection: links
+// Fields:
+//   - employee_id: string (required)
+//   - type: string (required)
+//   - url: string (required)
+//
+// Collection: resources
+// Fields:
+//   - employee_id: string (required)
+//   - type: string (required, 'pdf' or 'video')
+//   - file_url: string (required)
+//   - title: string
+//
+// Collection: products
+// Fields:
+//   - employee_id: string (required)
+//   - name: string (required)
+//   - description: string
+//   - image: string
+//
+// Collection: leads
+// Fields:
+//   - employee_id: string (required)
+//   - name: string (required)
+//   - phone: string
+//   - email: string
+//   - message: string
+//   - timestamp: timestamp (required)
+//
+// Collection: analytics
+// Fields:
+//   - employee_id: string (required)
+//   - event_type: string (required, 'view', 'click', 'share')
+//   - timestamp: timestamp (required)
+//   - metadata: map
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "dtm@thesachdevgroup.com" && request.auth.token.email_verified == true));
+    }
+
+    function isDocOwner(employeeId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/employees/$(employeeId)).data.user_id == request.auth.uid;
+    }
+
+    function isValidString(val, min, max) {
+      return val is string && val.size() >= min && val.size() <= max;
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidEmployee(data) {
+      return hasRequiredFields(['user_id', 'name', 'slug', 'status']) &&
+             isValidString(data.name, 2, 100) &&
+             isValidString(data.slug, 3, 50) &&
+             (!('designation' in data) || isValidString(data.designation, 0, 100)) &&
+             (!('phone' in data) || isValidString(data.phone, 0, 20)) &&
+             (!('email' in data) || isValidString(data.email, 0, 100)) &&
+             (!('photo' in data) || isValidString(data.photo, 0, 1000)) &&
+             (!('about' in data) || isValidString(data.about, 0, 2000)) &&
+             data.status in ['active', 'inactive'] &&
+             data.user_id is string;
+    }
+
+    function isValidLink(data) {
+      return hasRequiredFields(['employee_id', 'type', 'url']) &&
+             isValidString(data.type, 1, 50) &&
+             isValidString(data.url, 1, 1000) &&
+             data.employee_id is string;
+    }
+
+    function isValidResource(data) {
+      return hasRequiredFields(['employee_id', 'type', 'file_url']) &&
+             data.type in ['pdf', 'video'] &&
+             isValidString(data.file_url, 1, 1000) &&
+             (!('title' in data) || isValidString(data.title, 0, 200)) &&
+             data.employee_id is string;
+    }
+
+    function isValidProduct(data) {
+      return hasRequiredFields(['employee_id', 'name']) &&
+             isValidString(data.name, 1, 200) &&
+             (!('description' in data) || isValidString(data.description, 0, 1000)) &&
+             (!('image' in data) || isValidString(data.image, 0, 1000)) &&
+             data.employee_id is string;
+    }
+
+    function isValidLead(data) {
+      return hasRequiredFields(['employee_id', 'name', 'timestamp']) &&
+             isValidString(data.name, 2, 100) &&
+             (!('phone' in data) || isValidString(data.phone, 0, 20)) &&
+             (!('email' in data) || isValidString(data.email, 0, 100)) &&
+             (!('message' in data) || isValidString(data.message, 0, 1000)) &&
+             data.timestamp is timestamp &&
+             data.employee_id is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && 
+        hasRequiredFields(['email', 'role']) &&
+        request.resource.data.role == 'employee';
+      allow update: if isAdmin();
+    }
+
+    // Employees Collection
+    match /employees/{employeeId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && 
+        isValidEmployee(request.resource.data) &&
+        request.resource.data.user_id == request.auth.uid &&
+        request.resource.data.status == 'active';
+      allow update: if isAuthenticated() && (isDocOwner(employeeId) || isAdmin()) &&
+        isValidEmployee(request.resource.data) &&
+        (isAdmin() || (request.resource.data.user_id == resource.data.user_id && request.resource.data.status == resource.data.status));
+      allow delete: if isAdmin();
+    }
+
+    // Links Collection
+    match /links/{linkId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && (isDocOwner(request.resource.data.employee_id) || isAdmin()) && isValidLink(request.resource.data);
+      allow update: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin()) && isValidLink(request.resource.data);
+      allow delete: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin());
+    }
+
+    // Resources Collection
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && (isDocOwner(request.resource.data.employee_id) || isAdmin()) && isValidResource(request.resource.data);
+      allow update: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin()) && isValidResource(request.resource.data);
+      allow delete: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin());
+    }
+
+    // Products Collection
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && (isDocOwner(request.resource.data.employee_id) || isAdmin()) && isValidProduct(request.resource.data);
+      allow update: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin()) && isValidProduct(request.resource.data);
+      allow delete: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin());
+    }
+
+    // Leads Collection
+    match /leads/{leadId} {
+      allow read: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin());
+      allow create: if isValidLead(request.resource.data);
+      allow delete: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin());
+    }
+
+    // Analytics Collection
+    match /analytics/{eventId} {
+      allow read: if isAuthenticated() && (isDocOwner(resource.data.employee_id) || isAdmin());
+      allow create: if true;
+      allow delete: if isAdmin();
+    }
+  }
+}

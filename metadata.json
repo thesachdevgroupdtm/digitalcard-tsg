@@ -1,0 +1,8 @@
+{
+  "name": "Galaxy Toyota Digital Card Platform",
+  "description": "A premium SaaS platform for Galaxy Toyota employees to create, manage, and share digital business cards with integrated analytics and lead capture.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
