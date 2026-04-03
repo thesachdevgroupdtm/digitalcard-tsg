@@ -1,24 +1,66 @@
-import React, { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../firebase';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { LogIn, ShieldCheck } from 'lucide-react';
+import { LogIn, ShieldCheck, Mail, Lock, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '../AuthContext';
 
 const Login = () => {
+  const { user, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/dashboard');
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError('');
-    const provider = new GoogleAuthProvider();
+
     try {
-      await signInWithPopup(auth, provider);
-      navigate('/dashboard');
+      if (isRegistering) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+        
+        if (data.user && data.session) {
+          toast.success('Registration successful! Redirecting...');
+          navigate('/dashboard');
+        } else {
+          toast.success('Registration successful! Please check your email for verification.');
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        toast.success('Login successful!');
+        navigate('/dashboard');
+      }
     } catch (err: any) {
-      setError(err.message);
+      console.error('Auth error:', err);
+      setError(err.message || 'An error occurred during authentication');
+      toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -37,30 +79,80 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold text-neutral-900">Galaxy Toyota</h1>
           <p className="text-neutral-500 mt-2">Digital Card Platform</p>
+          <h2 className="text-lg font-semibold text-neutral-700 mt-6">
+            {isRegistering ? 'Create an Account' : 'Welcome Back'}
+          </h2>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm">
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <span className="w-1 h-1 bg-red-600 rounded-full" />
             {error}
           </div>
         )}
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-neutral-900 text-white rounded-xl py-4 font-semibold flex items-center justify-center gap-3 hover:bg-neutral-800 transition-all disabled:opacity-50"
-        >
-          {loading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <>
-              <LogIn className="w-5 h-5" />
-              Sign in with Google
-            </>
-          )}
-        </button>
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2 px-1">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                placeholder="name@company.com"
+              />
+            </div>
+          </div>
 
-        <p className="text-center text-neutral-400 text-xs mt-8">
+          <div>
+            <label className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2 px-1">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-neutral-900 text-white rounded-xl py-4 font-semibold flex items-center justify-center gap-3 hover:bg-neutral-800 transition-all disabled:opacity-50 shadow-lg shadow-neutral-200"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                {isRegistering ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+                {isRegistering ? 'Register' : 'Sign In'}
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Register"}
+          </button>
+        </div>
+
+        <p className="text-center text-neutral-400 text-[10px] mt-8 uppercase tracking-widest font-bold">
           Authorized personnel only. Access is monitored.
         </p>
       </motion.div>

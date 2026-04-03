@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, storage } from '../firebase';
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  deleteDoc, 
-  onSnapshot,
-  orderBy
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { supabase } from '../supabase';
 import { Employee, Link, Resource, Product, Lead, AnalyticsEvent } from '../types';
 import { motion } from 'motion/react';
 import { 
@@ -53,11 +38,11 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const { user, profile, isAdmin } = useAuth();
@@ -71,6 +56,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'resources' | 'products' | 'leads'>('profile');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [localPhotoPreview, setLocalPhotoPreview] = useState<string | null>(null);
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -85,14 +71,17 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
 
-    const fetchEmployee = async () => {
+    const fetchData = async () => {
       try {
-        const q = query(collection(db, 'employees'), where('user_id', '==', user.uid));
-        const snapshot = await getDocs(q);
+        // Fetch employee
+        const { data: empData, error: empError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
         
-        if (!snapshot.empty) {
-          const empData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Employee;
-          setEmployee(empData);
+        if (empData) {
+          setEmployee(empData as Employee);
           setProfileForm({
             name: empData.name || '',
             designation: empData.designation || '',
@@ -103,44 +92,36 @@ const Dashboard = () => {
           });
 
           // Fetch related data
-          const linksUnsubscribe = onSnapshot(query(collection(db, 'links'), where('employee_id', '==', empData.id)), (s) => {
-            setLinks(s.docs.map(d => ({ id: d.id, ...d.data() } as Link)));
-          });
+          const [linksRes, resourcesRes, productsRes, leadsRes, analyticsRes] = await Promise.all([
+            supabase.from('links').select('*').eq('employee_id', empData.id),
+            supabase.from('resources').select('*').eq('employee_id', empData.id),
+            supabase.from('products').select('*').eq('employee_id', empData.id),
+            supabase.from('leads').select('*').eq('employee_id', empData.id).order('created_at', { ascending: false }),
+            supabase.from('analytics').select('*').eq('employee_id', empData.id).order('created_at', { ascending: false })
+          ]);
 
-          const resourcesUnsubscribe = onSnapshot(query(collection(db, 'resources'), where('employee_id', '==', empData.id)), (s) => {
-            setResources(s.docs.map(d => ({ id: d.id, ...d.data() } as Resource)));
-          });
+          if (linksRes.data) setLinks(linksRes.data as Link[]);
+          if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
+          if (productsRes.data) setProducts(productsRes.data as Product[]);
+          if (leadsRes.data) setLeads(leadsRes.data.map(l => ({ ...l, timestamp: l.created_at })) as any);
+          if (analyticsRes.data) setAnalytics(analyticsRes.data.map(a => ({ ...a, timestamp: a.created_at })) as any);
 
-          const productsUnsubscribe = onSnapshot(query(collection(db, 'products'), where('employee_id', '==', empData.id)), (s) => {
-            setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-          });
-
-          const leadsUnsubscribe = onSnapshot(query(collection(db, 'leads'), where('employee_id', '==', empData.id), orderBy('timestamp', 'desc')), (s) => {
-            setLeads(s.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
-          });
-
-          const analyticsUnsubscribe = onSnapshot(query(collection(db, 'analytics'), where('employee_id', '==', empData.id), orderBy('timestamp', 'desc')), (s) => {
-            setAnalytics(s.docs.map(d => ({ id: d.id, ...d.data() } as AnalyticsEvent)));
-          });
-
-          return () => {
-            linksUnsubscribe();
-            resourcesUnsubscribe();
-            productsUnsubscribe();
-            leadsUnsubscribe();
-            analyticsUnsubscribe();
-          };
-        } else {
+        } else if (empError && empError.code === 'PGRST116') {
           // Create initial employee profile if it doesn't exist
-          let baseSlug = user.displayName?.toLowerCase().replace(/\s+/g, '-') || user.email?.split('@')[0] || `user-${user.uid.slice(0, 5)}`;
+          const userMetadata = user.user_metadata || {};
+          let baseSlug = userMetadata.full_name?.toLowerCase().replace(/\s+/g, '-') || user.email?.split('@')[0] || `user-${user.id.slice(0, 5)}`;
           let finalSlug = baseSlug;
           let isUnique = false;
           let counter = 1;
 
           while (!isUnique) {
-            const slugQuery = query(collection(db, 'employees'), where('slug', '==', finalSlug));
-            const slugSnapshot = await getDocs(slugQuery);
-            if (slugSnapshot.empty) {
+            const { data: existing } = await supabase
+              .from('employees')
+              .select('id')
+              .eq('slug', finalSlug)
+              .single();
+            
+            if (!existing) {
               isUnique = true;
             } else {
               finalSlug = `${baseSlug}-${counter}`;
@@ -149,18 +130,26 @@ const Dashboard = () => {
           }
 
           const newEmp = {
-            user_id: user.uid,
-            name: user.displayName || '',
+            user_id: user.id,
+            name: userMetadata.full_name || '',
             email: user.email || '',
             slug: finalSlug,
             designation: '',
             phone: '',
-            photo: user.photoURL || '',
+            photo: userMetadata.avatar_url || '',
             about: ''
           };
-          const docRef = await addDoc(collection(db, 'employees'), newEmp);
-          setEmployee({ id: docRef.id, ...newEmp } as Employee);
-          setProfileForm({ ...profileForm, name: newEmp.name, email: newEmp.email, slug: newEmp.slug });
+
+          const { data: createdEmp, error: createError } = await supabase
+            .from('employees')
+            .insert([newEmp])
+            .select()
+            .single();
+
+          if (createdEmp) {
+            setEmployee(createdEmp as Employee);
+            setProfileForm({ ...profileForm, name: createdEmp.name, email: createdEmp.email, slug: createdEmp.slug });
+          }
         }
       } catch (err) {
         console.error("Error fetching employee:", err);
@@ -169,32 +158,79 @@ const Dashboard = () => {
       }
     };
 
-    fetchEmployee();
+    fetchData();
   }, [user]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employee) return;
+    if (!user) return;
     setIsUpdating(true);
     
-    // Check if slug is unique if changed
-    if (profileForm.slug !== employee.slug) {
-      const slugQuery = query(collection(db, 'employees'), where('slug', '==', profileForm.slug));
-      const slugSnapshot = await getDocs(slugQuery);
-      if (!slugSnapshot.empty) {
-        alert('This URL slug is already taken. Please choose another one.');
+    // Generate slug if empty
+    const currentSlug = profileForm.slug || profileForm.name.toLowerCase().replace(/\s+/g, '-');
+    
+    // Check if slug is unique if changed or if we're creating/upserting
+    try {
+      const { data: existing } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('slug', currentSlug)
+        .neq('user_id', user.id)
+        .single();
+      
+      if (existing) {
+        toast.error('This URL slug is already taken. Please choose another one.');
         setIsUpdating(false);
         return;
       }
+    } catch (err) {
+      // PGRST116 is fine, it means slug is unique
     }
 
     try {
-      await updateDoc(doc(db, 'employees', employee.id), profileForm);
-      setEmployee({ ...employee, ...profileForm });
-      alert('Profile updated successfully!');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update profile. Please try again.');
+      // Generate slug from name if empty
+      const currentSlug = profileForm.slug.trim() || profileForm.name.toLowerCase().trim().replace(/\s+/g, '-');
+      
+      const updateData: any = {
+        user_id: user.id,
+        name: profileForm.name,
+        slug: currentSlug,
+        email: profileForm.email,
+        phone: profileForm.phone,
+        designation: profileForm.designation,
+        about: profileForm.about
+      };
+
+      // Handle photo: keep existing, or use UI avatars as fallback if name exists
+      if (employee?.photo) {
+        updateData.photo = employee.photo;
+      } else if (profileForm.name) {
+        updateData.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileForm.name)}&background=random`;
+      }
+
+      const { data, error } = await supabase
+        .from('employees')
+        .upsert(updateData, { onConflict: 'user_id' })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      setEmployee(data as Employee);
+      setProfileForm({
+        ...profileForm,
+        slug: data.slug,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        designation: data.designation,
+        about: data.about
+      });
+      toast.success('Profile updated successfully!');
+      console.log('Profile saved:', data);
+    } catch (err: any) {
+      console.error('Save Profile Error:', err);
+      toast.error('Failed to save profile: ' + (err.message || 'Unknown error'));
     } finally {
       setIsUpdating(false);
     }
@@ -202,50 +238,106 @@ const Dashboard = () => {
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !employee) return;
+    if (!file || !user) return;
 
-    const storageRef = ref(storage, `photos/${employee.id}/${file.name}`);
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB.');
+      return;
+    }
+
+    // Show local preview
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPhotoPreview(objectUrl);
+
+    const loadingToast = toast.loading('Uploading photo...');
+
     try {
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      await updateDoc(doc(db, 'employees', employee.id), { photo: url });
-      setEmployee({ ...employee, photo: url });
-    } catch (err) {
-      console.error(err);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage (bucket: avatars)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Storage Upload Error:', uploadError);
+        throw new Error('Image upload failed: ' + uploadError.message);
+      }
+
+      // Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update Database
+      const { error: updateError } = await supabase
+        .from('employees')
+        .update({ photo: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        console.error('Database Update Error:', updateError);
+        throw new Error('Failed to update profile with new photo');
+      }
+
+      if (employee) {
+        setEmployee({ ...employee, photo: publicUrl });
+      }
+      setLocalPhotoPreview(null); // Clear local preview after success
+      toast.success('Photo uploaded successfully!', { id: loadingToast });
+    } catch (err: any) {
+      console.error('Photo Upload Error:', err);
+      toast.error(err.message || 'Error uploading photo', { id: loadingToast });
+      setLocalPhotoPreview(null); // Clear local preview on error
     }
   };
 
   const addLink = async (type: string, url: string) => {
     if (!employee) return;
-    await addDoc(collection(db, 'links'), {
-      employee_id: employee.id,
-      type,
-      url
-    });
+    const { data, error } = await supabase
+      .from('links')
+      .insert([{ employee_id: employee.id, type, url }])
+      .select()
+      .single();
+    
+    if (data) setLinks([...links, data as Link]);
   };
 
   const deleteLink = async (id: string) => {
-    await deleteDoc(doc(db, 'links', id));
+    const { error } = await supabase.from('links').delete().eq('id', id);
+    if (!error) setLinks(links.filter(l => l.id !== id));
   };
 
   const addResource = async (type: 'pdf' | 'video', title: string, url: string) => {
     if (!employee) return;
-    await addDoc(collection(db, 'resources'), {
-      employee_id: employee.id,
-      type,
-      title,
-      file_url: url
-    });
+    const { data, error } = await supabase
+      .from('resources')
+      .insert([{ employee_id: employee.id, type, title, file_url: url }])
+      .select()
+      .single();
+    
+    if (data) setResources([...resources, data as Resource]);
   };
 
   const addProduct = async (name: string, description: string, image: string) => {
     if (!employee) return;
-    await addDoc(collection(db, 'products'), {
-      employee_id: employee.id,
-      name,
-      description,
-      image
-    });
+    const { data, error } = await supabase
+      .from('products')
+      .insert([{ employee_id: employee.id, name, description, image }])
+      .select()
+      .single();
+    
+    if (data) setProducts([...products, data as Product]);
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
@@ -272,7 +364,7 @@ const Dashboard = () => {
 
         <div className="p-4 border-t border-neutral-100">
           <button 
-            onClick={() => auth.signOut()}
+            onClick={() => supabase.auth.signOut()}
             className="w-full flex items-center gap-3 px-4 py-3 text-neutral-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
           >
             <LogOut size={18} />
@@ -339,8 +431,8 @@ const Dashboard = () => {
                   <div className="w-full lg:w-fit flex flex-col items-center gap-4">
                     <div className="relative group">
                       <div className="w-48 h-48 rounded-[3rem] bg-neutral-100 overflow-hidden border-8 border-white shadow-2xl shadow-neutral-200 transition-transform group-hover:scale-[1.02]">
-                        {employee?.photo ? (
-                          <img src={employee.photo} alt="Profile" className="w-full h-full object-cover" />
+                        {localPhotoPreview || employee?.photo ? (
+                          <img src={localPhotoPreview || employee?.photo} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-neutral-300">
                             <User size={64} />
@@ -461,7 +553,13 @@ const Dashboard = () => {
                           <p className="text-xs text-neutral-400 uppercase">{res.type}</p>
                         </div>
                       </div>
-                      <button onClick={() => deleteDoc(doc(db, 'resources', res.id))} className="p-2 text-neutral-400 hover:text-red-600 transition-all">
+                      <button 
+                        onClick={async () => {
+                          const { error } = await supabase.from('resources').delete().eq('id', res.id);
+                          if (!error) setResources(resources.filter(r => r.id !== res.id));
+                        }} 
+                        className="p-2 text-neutral-400 hover:text-red-600 transition-all"
+                      >
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -479,7 +577,10 @@ const Dashboard = () => {
                       <div className="aspect-video bg-neutral-200 relative">
                         {product.image && <img src={product.image} alt={product.name} className="w-full h-full object-cover" />}
                         <button 
-                          onClick={() => deleteDoc(doc(db, 'products', product.id))}
+                          onClick={async () => {
+                            const { error } = await supabase.from('products').delete().eq('id', product.id);
+                            if (!error) setProducts(products.filter(p => p.id !== product.id));
+                          }}
                           className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur rounded-xl text-red-600 opacity-0 group-hover:opacity-100 transition-all"
                         >
                           <Trash2 size={16} />
@@ -509,7 +610,7 @@ const Dashboard = () => {
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <h4 className="font-bold text-neutral-900 text-lg">{lead.name}</h4>
-                            <p className="text-xs text-neutral-400">{new Date(lead.timestamp?.toDate()).toLocaleString()}</p>
+                            <p className="text-xs text-neutral-400">{new Date(lead.timestamp).toLocaleString()}</p>
                           </div>
                           <div className="flex gap-2">
                             <a href={`tel:${lead.phone}`} className="p-2 bg-white rounded-xl text-neutral-600 hover:text-blue-600 shadow-sm"><Phone size={16} /></a>

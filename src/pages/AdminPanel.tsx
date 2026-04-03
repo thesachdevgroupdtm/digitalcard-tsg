@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db } from '../firebase';
-import { 
-  collection, 
-  getDocs, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  deleteDoc, 
-  doc,
-  updateDoc
-} from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { Employee, Lead, AnalyticsEvent, UserProfile } from '../types';
 import { motion } from 'motion/react';
 import { 
@@ -53,6 +43,8 @@ import {
 } from 'recharts';
 import { format, subDays, startOfDay, isSameDay } from 'date-fns';
 
+import { toast } from 'sonner';
+
 const AdminPanel = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -64,23 +56,35 @@ const AdminPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const employeesUnsubscribe = onSnapshot(collection(db, 'employees'), (s) => {
-      setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-    });
+    const fetchData = async () => {
+      try {
+        const [empRes, leadsRes, analyticsRes] = await Promise.all([
+          supabase.from('employees').select('*'),
+          supabase.from('leads').select('*').order('created_at', { ascending: false }),
+          supabase.from('analytics').select('*').order('created_at', { ascending: false })
+        ]);
 
-    const leadsUnsubscribe = onSnapshot(query(collection(db, 'leads'), orderBy('timestamp', 'desc')), (s) => {
-      setLeads(s.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
-    });
+        if (empRes.data) setEmployees(empRes.data as Employee[]);
+        if (leadsRes.data) setLeads(leadsRes.data.map(l => ({ ...l, timestamp: l.created_at })) as any);
+        if (analyticsRes.data) setAnalytics(analyticsRes.data.map(a => ({ ...a, timestamp: a.created_at })) as any);
+      } catch (err) {
+        console.error("Error fetching admin data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const analyticsUnsubscribe = onSnapshot(query(collection(db, 'analytics'), orderBy('timestamp', 'desc')), (s) => {
-      setAnalytics(s.docs.map(d => ({ id: d.id, ...d.data() } as AnalyticsEvent)));
-    });
+    fetchData();
 
-    setLoading(false);
+    // Optional: Real-time subscriptions
+    const empSub = supabase.channel('employees-all').on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, fetchData).subscribe();
+    const leadsSub = supabase.channel('leads-all').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, fetchData).subscribe();
+    const analyticsSub = supabase.channel('analytics-all').on('postgres_changes', { event: '*', schema: 'public', table: 'analytics' }, fetchData).subscribe();
+
     return () => {
-      employeesUnsubscribe();
-      leadsUnsubscribe();
-      analyticsUnsubscribe();
+      empSub.unsubscribe();
+      leadsSub.unsubscribe();
+      analyticsSub.unsubscribe();
     };
   }, []);
 
@@ -99,9 +103,13 @@ const AdminPanel = () => {
   const toggleEmployeeStatus = async (id: string, currentStatus: string | undefined) => {
     const newStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
     try {
-      await updateDoc(doc(db, 'employees', id), { status: newStatus });
-    } catch (err) {
+      const { error } = await supabase.from('employees').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      toast.success(`Employee ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+      // fetchData will be called by subscription
+    } catch (err: any) {
       console.error("Error updating status:", err);
+      toast.error(err.message || "Failed to update status");
     }
   };
 
@@ -113,7 +121,7 @@ const AdminPanel = () => {
       l.phone,
       l.message.replace(/,/g, ';'),
       employees.find(e => e.id === l.employee_id)?.name || 'Unknown',
-      new Date(l.timestamp?.toDate()).toLocaleString()
+      new Date(l.timestamp).toLocaleString()
     ]);
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -133,12 +141,12 @@ const AdminPanel = () => {
       const dayViews = analytics.filter(e => 
         e.event_type === 'view' && 
         e.timestamp && 
-        isSameDay(e.timestamp.toDate(), date)
+        isSameDay(new Date(e.timestamp), date)
       ).length;
       const dayClicks = analytics.filter(e => 
         e.event_type === 'click' && 
         e.timestamp && 
-        isSameDay(e.timestamp.toDate(), date)
+        isSameDay(new Date(e.timestamp), date)
       ).length;
       return {
         date: format(date, 'MMM dd'),
@@ -271,7 +279,23 @@ const AdminPanel = () => {
                               {emp.status === 'inactive' ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
                             </button>
                             <a href={`/card/${emp.slug}`} target="_blank" className="p-2 text-neutral-400 hover:text-blue-600 transition-all"><ExternalLink size={18} /></a>
-                            <button onClick={() => deleteDoc(doc(db, 'employees', emp.id))} className="p-2 text-neutral-400 hover:text-red-600 transition-all"><Trash2 size={18} /></button>
+                            <button 
+                              onClick={async () => {
+                                toast.warning('Are you sure you want to delete this employee?', {
+                                  action: {
+                                    label: 'Delete',
+                                    onClick: async () => {
+                                      const { error } = await supabase.from('employees').delete().eq('id', emp.id);
+                                      if (error) toast.error(error.message);
+                                      else toast.success('Employee deleted');
+                                    }
+                                  }
+                                });
+                              }} 
+                              className="p-2 text-neutral-400 hover:text-red-600 transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -298,8 +322,17 @@ const AdminPanel = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-neutral-400 mb-2">{new Date(lead.timestamp?.toDate()).toLocaleString()}</p>
-                      <button onClick={() => deleteDoc(doc(db, 'leads', lead.id))} className="p-2 text-neutral-400 hover:text-red-600 transition-all"><Trash2 size={18} /></button>
+                      <p className="text-xs text-neutral-400 mb-2">{new Date(lead.timestamp).toLocaleString()}</p>
+                      <button 
+                        onClick={async () => {
+                          const { error } = await supabase.from('leads').delete().eq('id', lead.id);
+                          if (error) toast.error(error.message);
+                          else toast.success('Lead deleted');
+                        }} 
+                        className="p-2 text-neutral-400 hover:text-red-600 transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -431,8 +464,8 @@ const AdminPanel = () => {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-medium text-neutral-900">{format(new Date(event.timestamp?.toDate()), 'HH:mm')}</p>
-                          <p className="text-[10px] text-neutral-400">{format(new Date(event.timestamp?.toDate()), 'MMM dd')}</p>
+                          <p className="text-xs font-medium text-neutral-900">{format(new Date(event.timestamp), 'HH:mm')}</p>
+                          <p className="text-[10px] text-neutral-400">{format(new Date(event.timestamp), 'MMM dd')}</p>
                         </div>
                       </div>
                     ))}

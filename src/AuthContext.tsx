@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { supabase } from './supabase';
+import { User } from '@supabase/supabase-js';
 import { UserProfile } from './types';
-import { OperationType, handleFirestoreError } from './firestore-utils';
 
 interface AuthContextType {
   user: User | null;
@@ -25,35 +23,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      
-      if (firebaseUser) {
-        try {
-          const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (profileDoc.exists()) {
-            setProfile({ id: firebaseUser.uid, ...profileDoc.data() } as UserProfile);
-          } else {
-            // Create default profile for new user
-            const newProfile: UserProfile = {
-              id: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              role: 'employee',
-            };
-            await setDoc(doc(db, 'users', firebaseUser.uid), newProfile);
-            setProfile(newProfile);
-          }
-        } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
-        }
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id, session.user.email || '');
       } else {
-        setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        await fetchProfile(currentUser.id, currentUser.email || '');
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const fetchProfile = async (userId: string, email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create it
+        const newProfile: UserProfile = {
+          id: userId,
+          email: email,
+          role: 'employee',
+        };
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([newProfile]);
+        
+        if (!insertError) {
+          setProfile(newProfile);
+        }
+      } else if (data) {
+        setProfile(data as UserProfile);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const isAdmin = profile?.role === 'admin' || user?.email === 'dtm@thesachdevgroup.com';
 

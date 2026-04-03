@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import DigitalCard from './pages/DigitalCard';
+import { Toaster } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute: React.FC<{ children: ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
@@ -32,6 +33,7 @@ const ProtectedRoute: React.FC<{ children: ReactNode; adminOnly?: boolean }> = (
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-center" richColors />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />

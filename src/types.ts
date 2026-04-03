@@ -49,13 +49,13 @@ export interface Lead {
   phone: string;
   email: string;
   message: string;
-  timestamp: any;
+  timestamp: string;
 }
 
 export interface AnalyticsEvent {
   id: string;
   employee_id: string;
   event_type: 'view' | 'click' | 'share';
-  timestamp: any;
+  timestamp: string;
   metadata?: Record<string, any>;
 }

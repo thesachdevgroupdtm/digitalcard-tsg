@@ -1,15 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useParams } from 'react-router-dom';
-import { db } from '../firebase';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  Timestamp,
-  onSnapshot
-} from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { Employee, Link, Resource, Product } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -39,6 +30,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import VCard from 'vcf';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 // Lazy load sections for performance
@@ -82,39 +74,42 @@ const DigitalCard = () => {
 
     const fetchData = async () => {
       try {
-        const q = query(collection(db, 'employees'), where('slug', '==', slug));
-        const snapshot = await getDocs(q);
+        console.log('Fetching card for slug:', slug);
+        const { data: empData, error: empError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('slug', slug)
+          .single();
         
-        if (!snapshot.empty) {
-          const empData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Employee;
-          setEmployee(empData);
+        if (empError) {
+          console.error('Fetch Card Error:', empError);
+          setLoading(false);
+          return;
+        }
+
+        if (empData) {
+          console.log('Employee data found:', empData);
+          setEmployee(empData as Employee);
 
           // Track view
-          await addDoc(collection(db, 'analytics'), {
+          await supabase.from('analytics').insert([{
             employee_id: empData.id,
             event_type: 'view',
-            timestamp: Timestamp.now()
-          });
+            created_at: new Date().toISOString()
+          }]);
 
           // Fetch related data
-          const linksUnsubscribe = onSnapshot(query(collection(db, 'links'), where('employee_id', '==', empData.id)), (s) => {
-            setLinks(s.docs.map(d => ({ id: d.id, ...d.data() } as Link)));
-          });
+          const [linksRes, resourcesRes, productsRes] = await Promise.all([
+            supabase.from('links').select('*').eq('employee_id', empData.id),
+            supabase.from('resources').select('*').eq('employee_id', empData.id),
+            supabase.from('products').select('*').eq('employee_id', empData.id)
+          ]);
 
-          const resourcesUnsubscribe = onSnapshot(query(collection(db, 'resources'), where('employee_id', '==', empData.id)), (s) => {
-            setResources(s.docs.map(d => ({ id: d.id, ...d.data() } as Resource)));
-          });
-
-          const productsUnsubscribe = onSnapshot(query(collection(db, 'products'), where('employee_id', '==', empData.id)), (s) => {
-            setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-          });
+          if (linksRes.data) setLinks(linksRes.data as Link[]);
+          if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
+          if (productsRes.data) setProducts(productsRes.data as Product[]);
 
           setLoading(false);
-          return () => {
-            linksUnsubscribe();
-            resourcesUnsubscribe();
-            productsUnsubscribe();
-          };
         } else {
           setLoading(false);
         }
@@ -130,12 +125,12 @@ const DigitalCard = () => {
   const trackClick = async (type: string) => {
     if (!employee) return;
     try {
-      await addDoc(collection(db, 'analytics'), {
+      await supabase.from('analytics').insert([{
         employee_id: employee.id,
         event_type: 'click',
-        timestamp: Timestamp.now(),
+        created_at: new Date().toISOString(),
         metadata: { button: type }
-      });
+      }]);
     } catch (err) {
       console.error("Tracking error:", err);
     }
@@ -145,15 +140,16 @@ const DigitalCard = () => {
     e.preventDefault();
     if (!employee) return;
     try {
-      await addDoc(collection(db, 'leads'), {
+      const { error } = await supabase.from('leads').insert([{
         employee_id: employee.id,
         ...leadForm,
-        timestamp: Timestamp.now()
-      });
+        created_at: new Date().toISOString()
+      }]);
+      if (error) throw error;
       setSubmitted(true);
       setLeadForm({ name: '', phone: '', email: '', message: '' });
     } catch (err) {
-      alert("Failed to send message. Please try again.");
+      toast.error("Failed to send message. Please try again.");
     }
   };
 
