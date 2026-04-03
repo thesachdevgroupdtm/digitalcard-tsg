@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { Employee, Link, Resource, Product } from '../types';
@@ -68,9 +68,11 @@ const DigitalCard = () => {
   const [leadForm, setLeadForm] = useState({ name: '', phone: '', email: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || hasFetched.current) return;
+    hasFetched.current = true;
 
     const fetchData = async () => {
       try {
@@ -87,7 +89,7 @@ const DigitalCard = () => {
         const { data: empData, error } = await supabase
           .from('employees')
           .select('*')
-          .ilike('slug', cleanSlug)
+          .eq('slug', cleanSlug)
           .maybeSingle();
 
         // Debug logs

@@ -154,20 +154,21 @@ const Dashboard = () => {
     
     // Check if slug is unique if changed or if we're creating/upserting
     try {
-      const { data: existing } = await supabase
+      const { data: existing, error: slugError } = await supabase
         .from('employees')
         .select('id')
         .eq('slug', currentSlug)
         .neq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (existing) {
         toast.error('This URL slug is already taken. Please choose another one.');
         setIsUpdating(false);
+        isSaving.current = false;
         return;
       }
     } catch (err) {
-      // PGRST116 is fine, it means slug is unique
+      console.error('Slug check error:', err);
     }
 
     try {
