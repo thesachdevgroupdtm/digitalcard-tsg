@@ -74,45 +74,50 @@ const DigitalCard = () => {
 
     const fetchData = async () => {
       try {
-        console.log('Fetching card for slug:', slug);
-        const { data: empData, error: empError } = await supabase
+        const { data: empData, error } = await supabase
           .from('employees')
           .select('*')
           .eq('slug', slug)
-          .single();
-        
-        if (empError) {
-          console.error('Fetch Card Error:', empError);
+          .maybeSingle();
+
+        console.log('Slug:', slug);
+        console.log('Employee Data:', empData);
+        console.log('Fetch Error:', error);
+
+        if (error) {
+          console.error('Fetch Error:', error);
           setLoading(false);
           return;
         }
 
-        if (empData) {
-          console.log('Employee data found:', empData);
-          setEmployee(empData as Employee);
-
-          // Track view
-          await supabase.from('analytics').insert([{
-            employee_id: empData.id,
-            event_type: 'view',
-            created_at: new Date().toISOString()
-          }]);
-
-          // Fetch related data
-          const [linksRes, resourcesRes, productsRes] = await Promise.all([
-            supabase.from('links').select('*').eq('employee_id', empData.id),
-            supabase.from('resources').select('*').eq('employee_id', empData.id),
-            supabase.from('products').select('*').eq('employee_id', empData.id)
-          ]);
-
-          if (linksRes.data) setLinks(linksRes.data as Link[]);
-          if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
-          if (productsRes.data) setProducts(productsRes.data as Product[]);
-
+        if (!empData) {
+          console.log('No employee found for this slug');
+          setEmployee(null);
           setLoading(false);
-        } else {
-          setLoading(false);
+          return;
         }
+
+        setEmployee(empData as Employee);
+
+        // Track view
+        await supabase.from('analytics').insert([{
+          employee_id: empData.id,
+          event_type: 'view',
+          created_at: new Date().toISOString()
+        }]);
+
+        // Fetch related data
+        const [linksRes, resourcesRes, productsRes] = await Promise.all([
+          supabase.from('links').select('*').eq('employee_id', empData.id),
+          supabase.from('resources').select('*').eq('employee_id', empData.id),
+          supabase.from('products').select('*').eq('employee_id', empData.id)
+        ]);
+
+        if (linksRes.data) setLinks(linksRes.data as Link[]);
+        if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
+        if (productsRes.data) setProducts(productsRes.data as Product[]);
+
+        setLoading(false);
       } catch (err) {
         console.error("Error loading card:", err);
         setLoading(false);
