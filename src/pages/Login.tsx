@@ -16,6 +16,12 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for email verification success in URL
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=signup')) {
+      toast.success('Email verified successfully. Please login.');
+    }
+    
     if (user && !authLoading) {
       navigate('/dashboard');
     }

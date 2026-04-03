@@ -166,8 +166,12 @@ const Dashboard = () => {
     if (!user) return;
     setIsUpdating(true);
     
-    // Generate slug if empty
-    const currentSlug = profileForm.slug || profileForm.name.toLowerCase().replace(/\s+/g, '-');
+    // Generate slug according to specific requirements
+    const currentSlug = (profileForm.slug || profileForm.name)
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
     
     // Check if slug is unique if changed or if we're creating/upserting
     try {
@@ -188,25 +192,19 @@ const Dashboard = () => {
     }
 
     try {
-      // Generate slug from name if empty
-      const currentSlug = profileForm.slug.trim() || profileForm.name.toLowerCase().trim().replace(/\s+/g, '-');
-      
-      const updateData: any = {
+      const updateData = {
         user_id: user.id,
         name: profileForm.name,
         slug: currentSlug,
         email: profileForm.email,
         phone: profileForm.phone,
         designation: profileForm.designation,
-        about: profileForm.about
+        photo: employee?.photo || (profileForm.name ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profileForm.name)}&background=random` : ''),
+        about: profileForm.about,
+        status: 'active'
       };
 
-      // Handle photo: keep existing, or use UI avatars as fallback if name exists
-      if (employee?.photo) {
-        updateData.photo = employee.photo;
-      } else if (profileForm.name) {
-        updateData.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileForm.name)}&background=random`;
-      }
+      console.log('Upserting profile data:', updateData);
 
       const { data, error } = await supabase
         .from('employees')
@@ -226,11 +224,11 @@ const Dashboard = () => {
         designation: data.designation,
         about: data.about
       });
-      toast.success('Profile updated successfully!');
-      console.log('Profile saved:', data);
+      toast.success('Profile saved successfully');
+      console.log('Profile saved successfully:', data);
     } catch (err: any) {
       console.error('Save Profile Error:', err);
-      toast.error('Failed to save profile: ' + (err.message || 'Unknown error'));
+      toast.error('Something went wrong: ' + (err.message || 'Failed to save profile'));
     } finally {
       setIsUpdating(false);
     }
@@ -257,9 +255,10 @@ const Dashboard = () => {
     const loadingToast = toast.loading('Uploading photo...');
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}-${Date.now()}.jpg`;
+      const filePath = fileName; 
+
+      console.log('Uploading photo to avatars bucket:', filePath);
 
       // Upload to Supabase Storage (bucket: avatars)
       const { error: uploadError } = await supabase.storage
@@ -279,6 +278,8 @@ const Dashboard = () => {
         .from('avatars')
         .getPublicUrl(filePath);
 
+      console.log('Photo uploaded, public URL:', publicUrl);
+
       // Update Database
       const { error: updateError } = await supabase
         .from('employees')
@@ -294,10 +295,10 @@ const Dashboard = () => {
         setEmployee({ ...employee, photo: publicUrl });
       }
       setLocalPhotoPreview(null); // Clear local preview after success
-      toast.success('Photo uploaded successfully!', { id: loadingToast });
+      toast.success('Image uploaded successfully', { id: loadingToast });
     } catch (err: any) {
       console.error('Photo Upload Error:', err);
-      toast.error(err.message || 'Error uploading photo', { id: loadingToast });
+      toast.error('Something went wrong: ' + (err.message || 'Error uploading photo'), { id: loadingToast });
       setLocalPhotoPreview(null); // Clear local preview on error
     }
   };
@@ -466,7 +467,7 @@ const Dashboard = () => {
                         <input 
                           type="text" 
                           value={profileForm.slug}
-                          onChange={e => setProfileForm({...profileForm, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})}
+                          onChange={e => setProfileForm({...profileForm, slug: e.target.value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')})}
                           className="bg-white border border-blue-200 rounded-xl px-4 py-2 text-sm font-bold text-neutral-900 focus:ring-2 focus:ring-blue-500/20 outline-none w-48"
                           placeholder="your-slug"
                         />
