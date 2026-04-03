@@ -11,4 +11,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   if (!supabaseAnonKey) throw new Error('VITE_SUPABASE_ANON_KEY is required to initialize Supabase.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});

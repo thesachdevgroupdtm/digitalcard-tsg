@@ -74,6 +74,14 @@ const DigitalCard = () => {
 
     const fetchData = async () => {
       try {
+        // Wait for auth session before fetch to ensure stability
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) {
+          console.log('No session found, retrying in 500ms...');
+          setTimeout(fetchData, 500);
+          return;
+        }
+
         const cleanSlug = slug?.trim().toLowerCase();
         
         const { data: empData, error } = await supabase

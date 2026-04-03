@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { supabase } from '../supabase';
 import { Employee, Link, Resource, Product, Lead, AnalyticsEvent } from '../types';
@@ -57,6 +57,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'links' | 'resources' | 'products' | 'leads'>('profile');
   const [isUpdating, setIsUpdating] = useState(false);
   const [localPhotoPreview, setLocalPhotoPreview] = useState<string | null>(null);
+  const isSaving = useRef(false);
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -140,10 +141,11 @@ const Dashboard = () => {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || isSaving.current) return;
+    isSaving.current = true;
     setIsUpdating(true);
     
-    // Generate slug according to specific requirements
+    await new Promise(res => setTimeout(res, 300));
     const currentSlug = (profileForm.slug || profileForm.name)
       .toLowerCase()
       .trim()
@@ -208,20 +210,24 @@ const Dashboard = () => {
       toast.error('Something went wrong: ' + (err.message || 'Failed to save profile'));
     } finally {
       setIsUpdating(false);
+      isSaving.current = false;
     }
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user || isSaving.current) return;
+    isSaving.current = true;
 
     // Validate file type and size
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file.');
+      isSaving.current = false;
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
       toast.error('File size must be less than 2MB.');
+      isSaving.current = false;
       return;
     }
 
@@ -232,6 +238,8 @@ const Dashboard = () => {
     const loadingToast = toast.loading('Uploading photo...');
 
     try {
+      await supabase.auth.getSession();
+      await new Promise(res => setTimeout(res, 300));
       const fileName = `${user.id}-${Date.now()}.jpg`;
       const filePath = fileName; 
 
@@ -242,13 +250,15 @@ const Dashboard = () => {
         .from('avatars')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true
         });
 
       if (uploadError) {
         console.error('Storage Upload Error:', uploadError);
         throw new Error('Image upload failed: ' + uploadError.message);
       }
+
+      await new Promise(res => setTimeout(res, 300));
 
       // Get Public URL
       const { data: { publicUrl } } = supabase.storage
@@ -257,19 +267,29 @@ const Dashboard = () => {
 
       console.log('Photo uploaded, public URL:', publicUrl);
 
-      // Update Database
-      const { error: updateError } = await supabase
+      await new Promise(res => setTimeout(res, 300));
+
+      // Update Database (upsert instead of update)
+      const { data: updatedEmp, error: updateError } = await supabase
         .from('employees')
-        .update({ photo: publicUrl })
-        .eq('user_id', user.id);
+        .upsert({ 
+          user_id: user.id,
+          photo: publicUrl,
+          name: profileForm.name || employee?.name || '',
+          slug: profileForm.slug || employee?.slug || '',
+          email: profileForm.email || employee?.email || user.email || '',
+          status: 'active'
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
 
       if (updateError) {
         console.error('Database Update Error:', updateError);
         throw new Error('Failed to update profile with new photo');
       }
 
-      if (employee) {
-        setEmployee({ ...employee, photo: publicUrl });
+      if (updatedEmp) {
+        setEmployee(updatedEmp as Employee);
       }
       setLocalPhotoPreview(null); // Clear local preview after success
       toast.success('Image uploaded successfully', { id: loadingToast });
@@ -277,6 +297,8 @@ const Dashboard = () => {
       console.error('Photo Upload Error:', err);
       toast.error('Something went wrong: ' + (err.message || 'Error uploading photo'), { id: loadingToast });
       setLocalPhotoPreview(null); // Clear local preview on error
+    } finally {
+      isSaving.current = false;
     }
   };
 
