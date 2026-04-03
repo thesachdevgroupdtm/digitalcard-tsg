@@ -74,15 +74,25 @@ const DigitalCard = () => {
 
     const fetchData = async () => {
       try {
+        const cleanSlug = slug?.trim().toLowerCase();
+        
         const { data: empData, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('slug', slug)
+          .ilike('slug', cleanSlug)
           .maybeSingle();
 
-        console.log('Slug:', slug);
-        console.log('Employee Data:', empData);
-        console.log('Fetch Error:', error);
+        // Debug logs
+        console.log('Slug RAW:', slug);
+        console.log('Slug CLEAN:', cleanSlug);
+        console.log('Employee:', empData);
+        console.log('Error:', error);
+
+        // Fallback debug
+        const { data: allData } = await supabase
+          .from('employees')
+          .select('*');
+        console.log('All employees:', allData);
 
         if (error) {
           console.error('Fetch Error:', error);
