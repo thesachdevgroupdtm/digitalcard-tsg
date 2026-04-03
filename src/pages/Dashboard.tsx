@@ -173,13 +173,13 @@ const Dashboard = () => {
     try {
       const updateData = {
         user_id: user.id,
-        name: profileForm.name,
-        slug: currentSlug,
-        email: profileForm.email,
-        phone: profileForm.phone,
-        designation: profileForm.designation,
-        photo: employee?.photo || (profileForm.name ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profileForm.name)}&background=random` : ''),
-        about: profileForm.about,
+        name: profileForm.name || null,
+        slug: currentSlug || null,
+        email: profileForm.email || null,
+        phone: profileForm.phone || null,
+        designation: profileForm.designation || null,
+        photo: employee?.photo || (profileForm.name ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profileForm.name)}&background=random` : null),
+        about: profileForm.about || null,
         status: 'active'
       };
 
@@ -275,9 +275,9 @@ const Dashboard = () => {
         .upsert({ 
           user_id: user.id,
           photo: publicUrl,
-          name: profileForm.name || employee?.name || '',
-          slug: profileForm.slug || employee?.slug || '',
-          email: profileForm.email || employee?.email || user.email || '',
+          name: profileForm.name || employee?.name || null,
+          slug: profileForm.slug || employee?.slug || null,
+          email: profileForm.email || employee?.email || user.email || null,
           status: 'active'
         }, { onConflict: 'user_id' })
         .select()
