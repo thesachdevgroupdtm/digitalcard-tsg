@@ -69,97 +69,74 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    if (!user) return;
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
 
     const fetchData = async () => {
       try {
-        // Fetch employee
-        const { data: empData, error: empError } = await supabase
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+
+        if (!authUser) {
+          navigate('/login');
+          return;
+        }
+
+        // Fetch employee safely
+        const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', authUser.id)
           .single();
         
-        if (empData) {
-          setEmployee(empData as Employee);
-          setProfileForm({
-            name: empData.name || '',
-            designation: empData.designation || '',
-            phone: empData.phone || '',
-            email: empData.email || '',
-            about: empData.about || '',
-            slug: empData.slug || ''
-          });
-
-          // Fetch related data
-          const [linksRes, resourcesRes, productsRes, leadsRes, analyticsRes] = await Promise.all([
-            supabase.from('links').select('*').eq('employee_id', empData.id),
-            supabase.from('resources').select('*').eq('employee_id', empData.id),
-            supabase.from('products').select('*').eq('employee_id', empData.id),
-            supabase.from('leads').select('*').eq('employee_id', empData.id).order('created_at', { ascending: false }),
-            supabase.from('analytics').select('*').eq('employee_id', empData.id).order('created_at', { ascending: false })
-          ]);
-
-          if (linksRes.data) setLinks(linksRes.data as Link[]);
-          if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
-          if (productsRes.data) setProducts(productsRes.data as Product[]);
-          if (leadsRes.data) setLeads(leadsRes.data.map(l => ({ ...l, timestamp: l.created_at })) as any);
-          if (analyticsRes.data) setAnalytics(analyticsRes.data.map(a => ({ ...a, timestamp: a.created_at })) as any);
-
-        } else if (empError && empError.code === 'PGRST116') {
-          // Create initial employee profile if it doesn't exist
-          const userMetadata = user.user_metadata || {};
-          let baseSlug = userMetadata.full_name?.toLowerCase().replace(/\s+/g, '-') || user.email?.split('@')[0] || `user-${user.id.slice(0, 5)}`;
-          let finalSlug = baseSlug;
-          let isUnique = false;
-          let counter = 1;
-
-          while (!isUnique) {
-            const { data: existing } = await supabase
-              .from('employees')
-              .select('id')
-              .eq('slug', finalSlug)
-              .single();
-            
-            if (!existing) {
-              isUnique = true;
-            } else {
-              finalSlug = `${baseSlug}-${counter}`;
-              counter++;
-            }
-          }
-
-          const newEmp = {
-            user_id: user.id,
-            name: userMetadata.full_name || '',
-            email: user.email || '',
-            slug: finalSlug,
-            designation: '',
-            phone: '',
-            photo: userMetadata.avatar_url || '',
-            about: ''
-          };
-
-          const { data: createdEmp, error: createError } = await supabase
-            .from('employees')
-            .insert([newEmp])
-            .select()
-            .single();
-
-          if (createdEmp) {
-            setEmployee(createdEmp as Employee);
-            setProfileForm({ ...profileForm, name: createdEmp.name, email: createdEmp.email, slug: createdEmp.slug });
-          }
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching employee:', error);
+          setLoading(false);
+          return;
         }
+
+        if (!data) {
+          console.log('No profile found');
+          setEmployee(null);
+          setLoading(false);
+          return;
+        }
+
+        setEmployee(data as Employee);
+        setProfileForm({
+          name: data.name || '',
+          designation: data.designation || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          about: data.about || '',
+          slug: data.slug || ''
+        });
+
+        // Fetch related data
+        const [linksRes, resourcesRes, productsRes, leadsRes, analyticsRes] = await Promise.all([
+          supabase.from('links').select('*').eq('employee_id', data.id),
+          supabase.from('resources').select('*').eq('employee_id', data.id),
+          supabase.from('products').select('*').eq('employee_id', data.id),
+          supabase.from('leads').select('*').eq('employee_id', data.id).order('created_at', { ascending: false }),
+          supabase.from('analytics').select('*').eq('employee_id', data.id).order('created_at', { ascending: false })
+        ]);
+
+        if (linksRes.data) setLinks(linksRes.data as Link[]);
+        if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
+        if (productsRes.data) setProducts(productsRes.data as Product[]);
+        if (leadsRes.data) setLeads(leadsRes.data.map(l => ({ ...l, timestamp: l.created_at })) as any);
+        if (analyticsRes.data) setAnalytics(analyticsRes.data.map(a => ({ ...a, timestamp: a.created_at })) as any);
+
       } catch (err) {
-        console.error("Error fetching employee:", err);
+        console.error("Error in fetchData:", err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [user]);
+    return () => clearTimeout(timeout);
+  }, [user, navigate]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -341,7 +318,41 @@ const Dashboard = () => {
     if (data) setProducts([...products, data as Product]);
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-50">
+      <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
+      <p className="text-neutral-500 font-medium animate-pulse">Loading your dashboard...</p>
+    </div>
+  );
+
+  if (!employee && !loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl p-10 text-center border border-neutral-100">
+          <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <User className="text-blue-600 w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Complete Your Profile</h2>
+          <p className="text-neutral-500 mb-8">You haven't set up your digital card yet. Create your profile to get started.</p>
+          <button 
+            onClick={() => {
+              setEmployee({ name: '' } as any); // Temporary state to show the form
+              setActiveTab('profile');
+            }}
+            className="w-full bg-neutral-900 text-white rounded-2xl py-4 font-bold hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-200"
+          >
+            Create Profile
+          </button>
+          <button 
+            onClick={() => supabase.auth.signOut()}
+            className="mt-4 text-sm font-bold text-neutral-400 hover:text-neutral-600 transition-all"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col md:flex-row">
