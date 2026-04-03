@@ -239,7 +239,6 @@ const Dashboard = () => {
     const loadingToast = toast.loading('Uploading photo...');
 
     try {
-      await supabase.auth.getSession();
       await new Promise(res => setTimeout(res, 300));
       const fileName = `${user.id}-${Date.now()}.jpg`;
       const filePath = fileName; 

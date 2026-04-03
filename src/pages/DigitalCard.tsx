@@ -76,14 +76,6 @@ const DigitalCard = () => {
 
     const fetchData = async () => {
       try {
-        // Wait for auth session before fetch to ensure stability
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData?.session) {
-          console.log('No session found, retrying in 500ms...');
-          setTimeout(fetchData, 500);
-          return;
-        }
-
         const cleanSlug = slug?.trim().toLowerCase();
         
         const { data: empData, error } = await supabase
@@ -92,18 +84,6 @@ const DigitalCard = () => {
           .eq('slug', cleanSlug)
           .maybeSingle();
 
-        // Debug logs
-        console.log('Slug RAW:', slug);
-        console.log('Slug CLEAN:', cleanSlug);
-        console.log('Employee:', empData);
-        console.log('Error:', error);
-
-        // Fallback debug
-        const { data: allData } = await supabase
-          .from('employees')
-          .select('*');
-        console.log('All employees:', allData);
-
         if (error) {
           console.error('Fetch Error:', error);
           setLoading(false);
@@ -111,7 +91,6 @@ const DigitalCard = () => {
         }
 
         if (!empData) {
-          console.log('No employee found for this slug');
           setEmployee(null);
           setLoading(false);
           return;
