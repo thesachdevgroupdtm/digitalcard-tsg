@@ -51,28 +51,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string, email: string) => {
     try {
+      // We are removing the 'users' table as requested and using 'employees' for profile data
       const { data, error } = await supabase
-        .from('users')
+        .from('employees')
         .select('*')
-        .eq('id', userId)
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (error && error.code === 'PGRST116') {
-        // Profile doesn't exist, create it
-        const newProfile: UserProfile = {
+      if (data) {
+        // Map employee data to UserProfile if needed, or just use it as is
+        setProfile({
+          id: data.user_id,
+          email: data.email || email,
+          role: 'employee', // Default role since we removed the users table
+        });
+      } else {
+        // If no employee profile exists yet, set a default profile
+        setProfile({
           id: userId,
           email: email,
           role: 'employee',
-        };
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([newProfile]);
-        
-        if (!insertError) {
-          setProfile(newProfile);
-        }
-      } else if (data) {
-        setProfile(data as UserProfile);
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

@@ -55,11 +55,18 @@ const Login = () => {
           toast.success('Registration successful! Please check your email for verification.');
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        
+        if (data.user && !data.user.email_confirmed_at && data.user.app_metadata?.provider === 'email') {
+          toast.error('Please verify your email before logging in.');
+          setLoading(false);
+          return;
+        }
+
         toast.success('Login successful!');
         navigate('/dashboard');
       }

@@ -180,8 +180,8 @@ const DigitalCard = () => {
     if (!employee) return;
     trackClick('vcard');
     const card = new VCard();
-    card.set('fn', employee.name);
-    card.set('n', `${employee.name.split(' ').reverse().join(';')};;;;`);
+    card.set('fn', employee.name || 'User');
+    card.set('n', `${(employee?.name || "User").split(" ").reverse().join(';')};;;;`);
     card.set('title', employee.designation);
     card.set('tel', employee.phone, { type: 'cell' });
     card.set('email', employee.email, { type: 'work' });

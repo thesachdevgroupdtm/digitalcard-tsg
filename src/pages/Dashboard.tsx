@@ -413,7 +413,7 @@ const Dashboard = () => {
           {/* Top Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">Welcome back, {employee?.name.split(' ')[0]}!</h2>
+              <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">Welcome back, {(employee?.name || "User").split(" ")[0]}!</h2>
               <p className="text-neutral-500 mt-1">Manage your digital presence and track your engagement.</p>
             </div>
             {employee && (
