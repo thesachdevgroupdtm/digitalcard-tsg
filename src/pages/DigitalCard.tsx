@@ -71,6 +71,7 @@ const DigitalCard = () => {
   const hasFetched = useRef(false);
 
   useEffect(() => {
+    let isMounted = true;
     if (!slug || hasFetched.current) return;
     hasFetched.current = true;
 
@@ -83,6 +84,8 @@ const DigitalCard = () => {
           .select('*')
           .eq('slug', cleanSlug)
           .maybeSingle();
+
+        if (!isMounted) return;
 
         if (error) {
           console.error('Fetch Error:', error);
@@ -105,12 +108,16 @@ const DigitalCard = () => {
           created_at: new Date().toISOString()
         }]);
 
+        if (!isMounted) return;
+
         // Fetch related data
         const [linksRes, resourcesRes, productsRes] = await Promise.all([
           supabase.from('links').select('*').eq('employee_id', empData.id),
           supabase.from('resources').select('*').eq('employee_id', empData.id),
           supabase.from('products').select('*').eq('employee_id', empData.id)
         ]);
+
+        if (!isMounted) return;
 
         if (linksRes.data) setLinks(linksRes.data as Link[]);
         if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
@@ -119,11 +126,12 @@ const DigitalCard = () => {
         setLoading(false);
       } catch (err) {
         console.error("Error loading card:", err);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchData();
+    return () => { isMounted = false; };
   }, [slug]);
 
   const trackClick = async (type: string) => {

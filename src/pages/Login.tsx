@@ -14,8 +14,10 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const isMounted = React.useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
     // Check for email verification success in URL
     const hash = window.location.hash;
     if (hash && hash.includes('type=signup')) {
@@ -25,6 +27,10 @@ const Login = () => {
     if (user && !authLoading) {
       navigate('/dashboard');
     }
+
+    return () => {
+      isMounted.current = false;
+    };
   }, [user, authLoading, navigate]);
 
   if (authLoading) {
@@ -48,6 +54,8 @@ const Login = () => {
         });
         if (error) throw error;
         
+        if (!isMounted.current) return;
+
         if (data.user && data.session) {
           toast.success('Registration successful! Redirecting...');
           navigate('/dashboard');
@@ -61,6 +69,8 @@ const Login = () => {
         });
         if (error) throw error;
         
+        if (!isMounted.current) return;
+
         if (data.user && !data.user.email_confirmed_at && data.user.app_metadata?.provider === 'email') {
           toast.error('Please verify your email before logging in.');
           setLoading(false);
@@ -72,10 +82,14 @@ const Login = () => {
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setError(err.message || 'An error occurred during authentication');
-      toast.error(err.message || 'Authentication failed');
+      if (isMounted.current) {
+        setError(err.message || 'An error occurred during authentication');
+        toast.error(err.message || 'Authentication failed');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 

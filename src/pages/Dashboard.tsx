@@ -70,13 +70,18 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
+    let isMounted = true;
     const timeout = setTimeout(() => {
-      setLoading(false);
+      if (isMounted && loading && !user) {
+        setLoading(false);
+      }
     }, 5000);
 
     const fetchData = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (!isMounted) return;
 
         if (!authUser) {
           navigate('/login');
@@ -90,6 +95,8 @@ const Dashboard = () => {
           .eq('user_id', authUser.id)
           .single();
         
+        if (!isMounted) return;
+
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching employee:', error);
           setLoading(false);
@@ -122,6 +129,8 @@ const Dashboard = () => {
           supabase.from('analytics').select('*').eq('employee_id', data.id).order('created_at', { ascending: false })
         ]);
 
+        if (!isMounted) return;
+
         if (linksRes.data) setLinks(linksRes.data as Link[]);
         if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
         if (productsRes.data) setProducts(productsRes.data as Product[]);
@@ -131,12 +140,15 @@ const Dashboard = () => {
       } catch (err) {
         console.error("Error in fetchData:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchData();
-    return () => clearTimeout(timeout);
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, [user, navigate]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
