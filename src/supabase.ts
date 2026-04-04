@@ -19,3 +19,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce'
   }
 });
+
+export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  }
+});

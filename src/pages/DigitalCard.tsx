@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
+import { supabasePublic } from '../supabase';
 import { Employee, Link, Resource, Product } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -72,49 +72,73 @@ const DigitalCard = () => {
 
   useEffect(() => {
     let isMounted = true;
-    if (!slug || hasFetched.current) return;
+    
+    if (!slug) {
+      console.log("Slug is missing from URL");
+      setLoading(false);
+      return;
+    }
+
+    if (hasFetched.current) return;
     hasFetched.current = true;
 
+    console.log("Slug received:", slug);
+
     const fetchData = async () => {
+      console.log("fetchData function called for slug:", slug);
       try {
         const cleanSlug = slug?.trim().toLowerCase();
+        console.log("Cleaned slug:", cleanSlug);
         
-        const { data: empData, error } = await supabase
+        console.log("Calling Supabase for employee data...");
+        const { data, error } = await supabasePublic
           .from('employees')
           .select('*')
           .eq('slug', cleanSlug)
-          .maybeSingle();
+          .limit(1);
+
+        console.log("Supabase response - Data:", data, "Error:", error);
 
         if (!isMounted) return;
 
         if (error) {
           console.error('Fetch Error:', error);
-          setLoading(false);
-          return;
-        }
-
-        if (!empData) {
           setEmployee(null);
           setLoading(false);
           return;
         }
 
+        const empData = data?.[0] || null;
+
+        if (!empData) {
+          console.log("No employee found for slug:", cleanSlug);
+          setEmployee(null);
+          setLoading(false);
+          return;
+        }
+
+        console.log("Employee data found:", empData.name);
         setEmployee(empData as Employee);
 
         // Track view
-        await supabase.from('analytics').insert([{
-          employee_id: empData.id,
-          event_type: 'view',
-          created_at: new Date().toISOString()
-        }]);
+        try {
+          await supabasePublic.from('analytics').insert([{
+            employee_id: empData.id,
+            event_type: 'view',
+            created_at: new Date().toISOString()
+          }]);
+        } catch (trackErr) {
+          console.error("View tracking failed:", trackErr);
+        }
 
         if (!isMounted) return;
 
         // Fetch related data
+        console.log("Fetching related data (links, resources, products)...");
         const [linksRes, resourcesRes, productsRes] = await Promise.all([
-          supabase.from('links').select('*').eq('employee_id', empData.id),
-          supabase.from('resources').select('*').eq('employee_id', empData.id),
-          supabase.from('products').select('*').eq('employee_id', empData.id)
+          supabasePublic.from('links').select('*').eq('employee_id', empData.id),
+          supabasePublic.from('resources').select('*').eq('employee_id', empData.id),
+          supabasePublic.from('products').select('*').eq('employee_id', empData.id)
         ]);
 
         if (!isMounted) return;
@@ -123,10 +147,14 @@ const DigitalCard = () => {
         if (resourcesRes.data) setResources(resourcesRes.data as Resource[]);
         if (productsRes.data) setProducts(productsRes.data as Product[]);
 
+        console.log("All data fetched successfully");
         setLoading(false);
       } catch (err) {
         console.error("Error loading card:", err);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setEmployee(null);
+          setLoading(false);
+        }
       }
     };
 
@@ -137,7 +165,7 @@ const DigitalCard = () => {
   const trackClick = async (type: string) => {
     if (!employee) return;
     try {
-      await supabase.from('analytics').insert([{
+      await supabasePublic.from('analytics').insert([{
         employee_id: employee.id,
         event_type: 'click',
         created_at: new Date().toISOString(),
@@ -152,7 +180,7 @@ const DigitalCard = () => {
     e.preventDefault();
     if (!employee) return;
     try {
-      const { error } = await supabase.from('leads').insert([{
+      const { error } = await supabasePublic.from('leads').insert([{
         employee_id: employee.id,
         ...leadForm,
         created_at: new Date().toISOString()
