@@ -42,14 +42,14 @@ const ProductSection = lazy(() => Promise.resolve({ default: ({ products }: { pr
         <motion.div 
           whileHover={{ y: -5 }}
           key={product.id} 
-          className="min-w-[280px] bg-neutral-900/50 backdrop-blur rounded-[2rem] overflow-hidden border border-white/5 snap-center"
+          className="min-w-[280px] bg-neutral-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white/5 hover:border-[#EB0A1E]/30 transition-all snap-center shadow-xl"
         >
-          <div className="aspect-[4/3] bg-neutral-800">
+          <div className="aspect-[4/3] bg-neutral-800/50">
             {product.image && <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" />}
           </div>
           <div className="p-6">
-            <h4 className="font-bold text-lg mb-2">{product.name}</h4>
-            <p className="text-neutral-500 text-xs leading-relaxed line-clamp-2">{product.description}</p>
+            <h4 className="font-bold text-lg mb-2 text-white">{product.name}</h4>
+            <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">{product.description}</p>
           </div>
         </motion.div>
       ))}
@@ -242,21 +242,21 @@ const DigitalCard = () => {
   const shareToWhatsApp = () => {
     if (!employee) return;
     trackClick('whatsapp_share');
-    const text = encodeURIComponent(`*${employee.name}* - ${employee.designation}\nGalaxy Toyota\n\nView my digital business card:\n${window.location.href}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    const text = encodeURIComponent(`Hi, I found your digital card and would like to connect.\n\n*${employee.name}* - ${employee.designation}\nGalaxy Toyota\n\nView digital business card:\n${window.location.href}`);
+    window.open(`https://wa.me/${employee.phone.replace(/\D/g,'')}?text=${text}`, '_blank');
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950">
-      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black">
+      <div className="w-12 h-12 border-4 border-[#EB0A1E] border-t-transparent rounded-full animate-spin mb-4" />
       <p className="text-neutral-500 text-sm font-medium animate-pulse">Loading Premium Experience...</p>
     </div>
   );
 
   if (!employee || employee.status === 'inactive') return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 text-white p-6 text-center">
-      <div className="w-20 h-20 bg-neutral-900 rounded-3xl flex items-center justify-center mb-6 border border-white/5">
-        <X size={40} className="text-red-500" />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 text-center">
+      <div className="w-20 h-20 bg-neutral-900 rounded-3xl flex items-center justify-center mb-6 border border-white/5 shadow-2xl">
+        <X size={40} className="text-[#EB0A1E]" />
       </div>
       <h1 className="text-2xl font-bold mb-2">{employee?.status === 'inactive' ? 'Card Inactive' : 'Card Not Found'}</h1>
       <p className="text-neutral-500 text-sm mb-8">
@@ -264,29 +264,36 @@ const DigitalCard = () => {
           ? 'This digital business card has been temporarily deactivated.' 
           : 'The digital card you are looking for doesn\'t exist or has been moved.'}
       </p>
-      <a href="/" className="bg-white text-black px-8 py-3 rounded-xl font-bold text-sm">Go Home</a>
+      <a href="/" className="bg-[#EB0A1E] text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-[#c40819] transition-all shadow-lg shadow-[#EB0A1E]/20">Go Home</a>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#EB0A1E] selection:text-white relative overflow-x-hidden">
+      {/* Premium Background Elements */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#EB0A1E]/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#EB0A1E]/10 blur-[120px] rounded-full" />
+        <div className="absolute top-[30%] right-[10%] w-[20%] h-[20%] bg-[#EB0A1E]/5 blur-[80px] rounded-full" />
+      </div>
+
       {/* Floating Action Buttons */}
       <div className="fixed bottom-24 right-6 z-50 flex flex-col gap-3">
         <motion.a 
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.1, y: -2 }}
           whileTap={{ scale: 0.9 }}
           href={`tel:${employee.phone}`}
           onClick={() => trackClick('fab_call')}
-          className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-600/20 border border-white/10"
+          className="w-14 h-14 bg-[#EB0A1E] rounded-full flex items-center justify-center shadow-2xl shadow-[#EB0A1E]/30 border border-white/10"
         >
           <Phone size={24} />
         </motion.a>
         <motion.a 
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.1, y: -2 }}
           whileTap={{ scale: 0.9 }}
-          href={`https://wa.me/${employee.phone.replace(/\D/g,'')}`}
+          href={`https://wa.me/${employee.phone.replace(/\D/g,'')}?text=${encodeURIComponent("Hi, I found your digital card and would like to connect.")}`}
           onClick={() => trackClick('fab_whatsapp')}
-          className="w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-green-500/20 border border-white/10"
+          className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/30 border border-white/10"
         >
           <MessageSquare size={24} />
         </motion.a>
@@ -294,17 +301,18 @@ const DigitalCard = () => {
 
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:hidden">
-        <div className="bg-neutral-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-2 flex gap-2 shadow-2xl">
-          <button 
+        <div className="bg-neutral-900/60 backdrop-blur-2xl border border-white/10 rounded-full p-2 flex gap-2 shadow-2xl">
+          <motion.button 
+            whileTap={{ scale: 0.98 }}
             onClick={downloadVCard}
-            className="flex-1 bg-white text-black py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+            className="flex-1 bg-[#EB0A1E] text-white py-4 rounded-full font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#EB0A1E]/20"
           >
             <Download size={18} />
             Save Contact
-          </button>
+          </motion.button>
           <button 
             onClick={shareCard}
-            className="w-14 h-14 bg-neutral-800 rounded-2xl flex items-center justify-center border border-white/5"
+            className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center border border-white/10"
           >
             <Share2 size={20} />
           </button>
@@ -312,8 +320,8 @@ const DigitalCard = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-[45vh] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-600/30 via-neutral-950/60 to-neutral-950 z-10" />
+      <div className="relative h-[40vh] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#EB0A1E]/20 via-black/60 to-black z-10" />
         {employee.photo ? (
           <motion.img 
             initial={{ scale: 1.2, opacity: 0 }}
@@ -321,27 +329,28 @@ const DigitalCard = () => {
             transition={{ duration: 1.5 }}
             src={employee.photo} 
             alt={employee.name} 
-            className="w-full h-full object-cover blur-md" 
+            className="w-full h-full object-cover blur-xl" 
           />
         ) : (
           <div className="w-full h-full bg-neutral-900" />
         )}
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-40 relative z-20 pb-32">
+      <div className="max-w-md mx-auto px-6 -mt-32 relative z-20 pb-32">
         {/* Profile Card */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-neutral-900/40 backdrop-blur-3xl rounded-[3rem] p-10 border border-white/10 shadow-2xl text-center relative overflow-hidden"
+          className="bg-neutral-900/40 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl text-center relative overflow-hidden"
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EB0A1E] to-transparent opacity-50" />
           
           <div className="relative inline-block mb-8">
             <motion.div 
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
-              className="w-36 h-36 rounded-[2.5rem] bg-neutral-800 overflow-hidden border-4 border-neutral-900 shadow-2xl mx-auto"
+              whileHover={{ scale: 1.05 }}
+              className="w-36 h-36 rounded-full bg-neutral-800 overflow-hidden border-4 border-neutral-900 shadow-[0_0_30px_rgba(235,10,30,0.3)] mx-auto relative z-10"
             >
               {employee.photo ? (
                 <img src={employee.photo} alt={employee.name} className="w-full h-full object-cover" />
@@ -351,56 +360,82 @@ const DigitalCard = () => {
                 </div>
               )}
             </motion.div>
-            <div className="absolute -bottom-2 -right-2 bg-blue-600 p-2.5 rounded-2xl shadow-xl border-4 border-neutral-900">
-              <CheckCircle2 size={20} className="text-white" />
+            <motion.div 
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute inset-0 rounded-full bg-[#EB0A1E]/20 blur-xl -z-0"
+            />
+            <div className="absolute -bottom-1 -right-1 bg-[#EB0A1E] p-2.5 rounded-full shadow-xl border-4 border-neutral-900 z-20">
+              <CheckCircle2 size={18} className="text-white" />
             </div>
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">{employee.name}</h1>
-          <p className="text-blue-500 font-bold text-xs uppercase tracking-[0.4em] mb-6">{employee.designation}</p>
+          <h1 className="text-3xl font-black tracking-tight mb-2 text-white">{employee.name}</h1>
+          <p className="text-neutral-400 font-bold text-xs uppercase tracking-[0.4em] mb-6">{employee.designation}</p>
           
-          <div className="bg-white/5 rounded-2xl p-4 mb-8">
+          <div className="bg-white/5 rounded-2xl p-4 mb-8 border border-white/5">
             <p className="text-neutral-400 text-sm leading-relaxed italic">"{employee.about || 'Welcome to my digital business card.'}"</p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <ActionButton icon={<Phone />} label="Call" href={`tel:${employee.phone}`} onClick={() => trackClick('call')} />
             <ActionButton icon={<Mail />} label="Email" href={`mailto:${employee.email}`} onClick={() => trackClick('email')} />
-            <ActionButton icon={<MessageSquare />} label="WhatsApp" href={`https://wa.me/${employee.phone.replace(/\D/g,'')}`} onClick={() => trackClick('whatsapp')} />
+            <ActionButton icon={<MessageSquare />} label="WhatsApp" href={`https://wa.me/${employee.phone.replace(/\D/g,'')}?text=${encodeURIComponent("Hi, I found your digital card and would like to connect.")}`} onClick={() => trackClick('whatsapp')} />
           </div>
         </motion.div>
 
-        {/* Quick Actions */}
+        {/* CTA Section */}
         <div className="mt-8 space-y-3">
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={downloadVCard}
-            className="w-full flex items-center justify-between bg-white text-black p-5 rounded-3xl font-bold text-sm group hover:bg-neutral-100 transition-all"
+            className="w-full flex items-center justify-between bg-gradient-to-r from-[#EB0A1E] to-[#c40819] text-white p-5 rounded-full font-bold text-sm group transition-all shadow-xl shadow-[#EB0A1E]/20 relative overflow-hidden"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center">
+            <motion.div 
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+            />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <Download size={20} />
               </div>
               Save to Contacts
             </div>
-            <ArrowRight size={18} className="text-black/20 group-hover:translate-x-1 transition-transform" />
-          </button>
+            <ArrowRight size={18} className="text-white/50 group-hover:translate-x-1 transition-transform relative z-10" />
+          </motion.button>
 
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={shareCard}
-              className="flex items-center justify-center gap-3 bg-neutral-900 border border-white/5 p-5 rounded-3xl font-bold text-sm hover:bg-neutral-800 transition-all"
+              className="flex items-center justify-center gap-3 bg-neutral-900/60 backdrop-blur-xl border border-white/10 p-5 rounded-full font-bold text-sm hover:bg-neutral-800 transition-all shadow-lg"
             >
-              <Share2 size={18} className="text-blue-500" />
+              <Share2 size={18} className="text-[#EB0A1E]" />
               Share
             </button>
             <button 
               onClick={copyToClipboard}
-              className="flex items-center justify-center gap-3 bg-neutral-900 border border-white/5 p-5 rounded-3xl font-bold text-sm hover:bg-neutral-800 transition-all"
+              className="flex items-center justify-center gap-3 bg-neutral-900/60 backdrop-blur-xl border border-white/10 p-5 rounded-full font-bold text-sm hover:bg-neutral-800 transition-all shadow-lg"
             >
               {copySuccess ? <CheckCircle2 size={18} className="text-green-500" /> : <Copy size={18} className="text-neutral-400" />}
               {copySuccess ? 'Copied!' : 'Copy Link'}
             </button>
           </div>
+        </div>
+
+        {/* QR Code Section */}
+        <div className="mt-12 bg-white rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center text-center">
+          <h3 className="text-black text-xs font-black uppercase tracking-[0.3em] mb-6">Scan to Save Contact</h3>
+          <div className="p-4 bg-neutral-50 rounded-3xl border border-neutral-100 shadow-inner">
+            <QRCodeSVG 
+              value={window.location.href} 
+              size={160} 
+              includeMargin={false}
+              level="H"
+            />
+          </div>
+          <p className="text-neutral-400 text-[10px] mt-6 font-bold uppercase tracking-widest">Digital Business Card</p>
         </div>
 
         {/* Social Links */}
@@ -410,13 +445,14 @@ const DigitalCard = () => {
             <div className="grid grid-cols-4 gap-4">
               {links.map(link => (
                 <motion.a 
-                  whileHover={{ y: -5, scale: 1.05 }}
+                  whileHover={{ y: -5, scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   key={link.id} 
                   href={link.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   onClick={() => trackClick(`social_${link.type}`)}
-                  className="aspect-square bg-neutral-900/50 backdrop-blur rounded-[1.5rem] flex items-center justify-center border border-white/5 hover:bg-neutral-800 hover:border-white/10 transition-all"
+                  className="aspect-square bg-neutral-900/40 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center border border-white/10 hover:bg-neutral-800 hover:border-[#EB0A1E]/50 hover:shadow-[0_0_15px_rgba(235,10,30,0.2)] transition-all"
                 >
                   {getLinkIcon(link.type)}
                 </motion.a>
@@ -445,17 +481,17 @@ const DigitalCard = () => {
                   target="_blank" 
                   rel="noopener noreferrer"
                   onClick={() => trackClick(`resource_${res.type}`)}
-                  className="flex items-center justify-between p-6 bg-neutral-900/50 backdrop-blur rounded-[2rem] border border-white/5 hover:bg-neutral-800 transition-all group"
+                  className="flex items-center justify-between p-6 bg-neutral-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 hover:bg-neutral-800 hover:border-[#EB0A1E]/30 transition-all group shadow-lg"
                 >
                   <div className="flex items-center gap-5">
                     <div className={cn(
                       "w-14 h-14 rounded-2xl flex items-center justify-center",
-                      res.type === 'pdf' ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"
+                      res.type === 'pdf' ? "bg-red-500/10 text-red-500" : "bg-[#EB0A1E]/10 text-[#EB0A1E]"
                     )}>
                       {res.type === 'pdf' ? <FileText size={24} /> : <Video size={24} />}
                     </div>
                     <div>
-                      <p className="font-bold text-sm group-hover:text-blue-400 transition-colors">{res.title}</p>
+                      <p className="font-bold text-sm group-hover:text-[#EB0A1E] transition-colors text-white">{res.title}</p>
                       <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-1">{res.type}</p>
                     </div>
                   </div>
@@ -467,8 +503,8 @@ const DigitalCard = () => {
         )}
 
         {/* Inquiry Form */}
-        <div className="mt-12 bg-neutral-900/50 backdrop-blur rounded-[3rem] p-10 border border-white/5">
-          <h3 className="text-2xl font-bold mb-2">Get in Touch</h3>
+        <div className="mt-12 bg-neutral-900/40 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl">
+          <h3 className="text-2xl font-black mb-2 text-white">Get in Touch</h3>
           <p className="text-neutral-500 text-sm mb-8 leading-relaxed">Have a question? Send me a message and I'll respond shortly.</p>
           
           <AnimatePresence mode="wait">
@@ -480,14 +516,14 @@ const DigitalCard = () => {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="text-center py-10"
               >
-                <div className="w-20 h-20 bg-blue-500/20 text-blue-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
                   <CheckCircle2 size={40} />
                 </div>
-                <h4 className="font-bold text-xl mb-2">Message Sent!</h4>
+                <h4 className="font-bold text-xl mb-2 text-white">Message Sent!</h4>
                 <p className="text-neutral-500 text-sm">Thank you for reaching out. I'll be in touch soon.</p>
                 <button 
                   onClick={() => setSubmitted(false)}
-                  className="mt-8 text-blue-500 text-sm font-bold uppercase tracking-widest"
+                  className="mt-8 text-[#EB0A1E] text-sm font-bold uppercase tracking-widest hover:text-[#c40819] transition-colors"
                 >
                   Send Another
                 </button>
@@ -521,16 +557,18 @@ const DigitalCard = () => {
                     placeholder="How can I help you?" 
                     value={leadForm.message}
                     onChange={e => setLeadForm({...leadForm, message: e.target.value})}
-                    className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm outline-none focus:border-blue-500 focus:bg-white/10 transition-all min-h-[140px] resize-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all min-h-[140px] resize-none text-white"
                   />
                 </div>
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-blue-700 active:scale-[0.98] transition-all shadow-xl shadow-blue-600/20"
+                  className="w-full bg-[#EB0A1E] text-white py-5 rounded-full font-bold flex items-center justify-center gap-3 hover:bg-[#c40819] transition-all shadow-xl shadow-[#EB0A1E]/20"
                 >
                   <Send size={18} />
                   Send Message
-                </button>
+                </motion.button>
               </form>
             )}
           </AnimatePresence>
@@ -538,9 +576,9 @@ const DigitalCard = () => {
 
         {/* Footer */}
         <div className="mt-20 text-center">
-          <div className="w-12 h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent mx-auto mb-8" />
+          <div className="w-12 h-1 bg-gradient-to-r from-transparent via-[#EB0A1E]/30 to-transparent mx-auto mb-8" />
           <p className="text-neutral-600 text-[10px] uppercase tracking-[0.5em] mb-4">Official Digital Card of</p>
-          <h2 className="text-2xl font-black text-white/20 tracking-tighter italic">GALAXY TOYOTA</h2>
+          <h2 className="text-2xl font-black text-white/10 tracking-tighter italic">GALAXY TOYOTA</h2>
           <p className="text-neutral-700 text-[10px] mt-8">© 2026 All Rights Reserved</p>
         </div>
       </div>
@@ -548,7 +586,7 @@ const DigitalCard = () => {
       {/* QR Modal */}
       <AnimatePresence>
         {showQR && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-neutral-950/95 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -561,7 +599,7 @@ const DigitalCard = () => {
               >
                 <X size={28} />
               </button>
-              <h3 className="text-neutral-900 text-2xl font-black mb-2">Scan Me</h3>
+              <h3 className="text-black text-2xl font-black mb-2">Scan Me</h3>
               <p className="text-neutral-500 text-sm mb-10">Point your camera to instantly view my digital card.</p>
               
               <div className="bg-neutral-50 p-8 rounded-[2.5rem] inline-block mb-10 shadow-inner border border-neutral-100">
@@ -574,13 +612,13 @@ const DigitalCard = () => {
               </div>
               
               <div className="space-y-1">
-                <p className="text-neutral-900 font-bold text-lg">{employee.name}</p>
+                <p className="text-black font-bold text-lg">{employee.name}</p>
                 <p className="text-neutral-400 text-xs uppercase tracking-widest">{employee.designation}</p>
               </div>
 
               <button 
                 onClick={shareToWhatsApp}
-                className="mt-10 w-full bg-green-500 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-3"
+                className="mt-10 w-full bg-green-500 text-white py-4 rounded-full font-bold text-sm flex items-center justify-center gap-3 shadow-lg shadow-green-500/20"
               >
                 <MessageSquare size={18} />
                 Share on WhatsApp
@@ -595,15 +633,15 @@ const DigitalCard = () => {
 
 const ActionButton = ({ icon, label, href, onClick }: { icon: React.ReactNode, label: string, href: string, onClick: () => void }) => (
   <motion.a 
-    whileHover={{ y: -3 }}
+    whileHover={{ y: -5 }}
     whileTap={{ scale: 0.95 }}
     href={href}
     onClick={onClick}
     className="flex flex-col items-center gap-3 group"
   >
-    <div className="w-16 h-16 bg-white/5 rounded-[1.5rem] flex items-center justify-center border border-white/5 group-hover:bg-blue-600 group-hover:border-blue-500 transition-all shadow-lg">
+    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center border border-white/10 group-hover:bg-[#EB0A1E] group-hover:border-[#EB0A1E] group-hover:shadow-[0_0_20px_rgba(235,10,30,0.4)] transition-all duration-300">
       <div className="text-neutral-400 group-hover:text-white transition-colors">
-        {React.cloneElement(icon as React.ReactElement, { size: 28 })}
+        {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
     </div>
     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500 group-hover:text-white transition-colors">{label}</span>
@@ -613,7 +651,7 @@ const ActionButton = ({ icon, label, href, onClick }: { icon: React.ReactNode, l
 const FormInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input 
     {...props}
-    className="w-full bg-white/5 border border-white/5 rounded-2xl p-5 text-sm outline-none focus:border-blue-500 focus:bg-white/10 transition-all"
+    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all text-white placeholder:text-neutral-600"
   />
 );
 

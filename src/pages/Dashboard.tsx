@@ -314,42 +314,97 @@ const Dashboard = () => {
     }
   };
 
+  const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
   const addLink = async (type: string, url: string) => {
     if (!employee) return;
-    const { data, error } = await supabase
-      .from('links')
-      .insert([{ employee_id: employee.id, type, url }])
-      .select()
-      .single();
-    
-    if (data) setLinks([...links, data as Link]);
+    if (editingLink) {
+      const { data, error } = await supabase
+        .from('links')
+        .update({ type, url })
+        .eq('id', editingLink.id)
+        .select()
+        .single();
+      if (data) {
+        setLinks(links.map(l => l.id === data.id ? data as Link : l));
+        setEditingLink(null);
+        toast.success('Link updated');
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('links')
+        .insert([{ employee_id: employee.id, type, url }])
+        .select()
+        .single();
+      if (data) {
+        setLinks([...links, data as Link]);
+        toast.success('Link added');
+      }
+    }
   };
 
   const deleteLink = async (id: string) => {
     const { error } = await supabase.from('links').delete().eq('id', id);
-    if (!error) setLinks(links.filter(l => l.id !== id));
+    if (!error) {
+      setLinks(links.filter(l => l.id !== id));
+      toast.success('Link deleted');
+    }
   };
 
   const addResource = async (type: 'pdf' | 'video', title: string, url: string) => {
     if (!employee) return;
-    const { data, error } = await supabase
-      .from('resources')
-      .insert([{ employee_id: employee.id, type, title, file_url: url }])
-      .select()
-      .single();
-    
-    if (data) setResources([...resources, data as Resource]);
+    if (editingResource) {
+      const { data, error } = await supabase
+        .from('resources')
+        .update({ type, title, file_url: url })
+        .eq('id', editingResource.id)
+        .select()
+        .single();
+      if (data) {
+        setResources(resources.map(r => r.id === data.id ? data as Resource : r));
+        setEditingResource(null);
+        toast.success('Resource updated');
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('resources')
+        .insert([{ employee_id: employee.id, type, title, file_url: url }])
+        .select()
+        .single();
+      if (data) {
+        setResources([...resources, data as Resource]);
+        toast.success('Resource added');
+      }
+    }
   };
 
   const addProduct = async (name: string, description: string, image: string) => {
     if (!employee) return;
-    const { data, error } = await supabase
-      .from('products')
-      .insert([{ employee_id: employee.id, name, description, image }])
-      .select()
-      .single();
-    
-    if (data) setProducts([...products, data as Product]);
+    if (editingProduct) {
+      const { data, error } = await supabase
+        .from('products')
+        .update({ name, description, image })
+        .eq('id', editingProduct.id)
+        .select()
+        .single();
+      if (data) {
+        setProducts(products.map(p => p.id === data.id ? data as Product : p));
+        setEditingProduct(null);
+        toast.success('Product updated');
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{ employee_id: employee.id, name, description, image }])
+        .select()
+        .single();
+      if (data) {
+        setProducts([...products, data as Product]);
+        toast.success('Product added');
+      }
+    }
   };
 
   if (loading) return (
@@ -568,9 +623,17 @@ const Dashboard = () => {
                               <p className="text-xs text-neutral-400 truncate max-w-[200px]">{link.url}</p>
                             </div>
                           </div>
-                          <button onClick={() => deleteLink(link.id)} className="p-2 text-neutral-400 hover:text-red-600 transition-all">
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => setEditingLink(link)} 
+                              className="p-2 text-neutral-400 hover:text-blue-600 transition-all"
+                            >
+                              <Plus size={18} className="rotate-45" /> {/* Using Plus as Edit icon for simplicity or I could use Edit from lucide */}
+                            </button>
+                            <button onClick={() => deleteLink(link.id)} className="p-2 text-neutral-400 hover:text-red-600 transition-all">
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -582,7 +645,7 @@ const Dashboard = () => {
             {activeTab === 'resources' && (
               <div className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <AddResourceForm onAdd={addResource} />
+                  <AddResourceForm onAdd={addResource} editingResource={editingResource} onCancel={() => setEditingResource(null)} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                   {resources.map(res => (
@@ -599,15 +662,26 @@ const Dashboard = () => {
                           <p className="text-xs text-neutral-400 uppercase">{res.type}</p>
                         </div>
                       </div>
-                      <button 
-                        onClick={async () => {
-                          const { error } = await supabase.from('resources').delete().eq('id', res.id);
-                          if (!error) setResources(resources.filter(r => r.id !== res.id));
-                        }} 
-                        className="p-2 text-neutral-400 hover:text-red-600 transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => setEditingResource(res)} 
+                          className="p-2 text-neutral-400 hover:text-blue-600 transition-all"
+                        >
+                          <Plus size={18} className="rotate-45" />
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const { error } = await supabase.from('resources').delete().eq('id', res.id);
+                            if (!error) {
+                              setResources(resources.filter(r => r.id !== res.id));
+                              toast.success('Resource deleted');
+                            }
+                          }} 
+                          className="p-2 text-neutral-400 hover:text-red-600 transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -616,21 +690,32 @@ const Dashboard = () => {
 
             {activeTab === 'products' && (
               <div className="space-y-8">
-                <AddProductForm onAdd={addProduct} />
+                <AddProductForm onAdd={addProduct} editingProduct={editingProduct} onCancel={() => setEditingProduct(null)} />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {products.map(product => (
-                    <div key={product.id} className="bg-neutral-50 rounded-3xl overflow-hidden border border-neutral-100 group">
-                      <div className="aspect-video bg-neutral-200 relative">
+                    <div key={product.id} className="bg-white rounded-3xl overflow-hidden border border-neutral-200 group shadow-sm">
+                      <div className="aspect-video bg-neutral-100 relative">
                         {product.image && <img src={product.image} alt={product.name} className="w-full h-full object-cover" />}
-                        <button 
-                          onClick={async () => {
-                            const { error } = await supabase.from('products').delete().eq('id', product.id);
-                            if (!error) setProducts(products.filter(p => p.id !== product.id));
-                          }}
-                          className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur rounded-xl text-red-600 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <button 
+                            onClick={() => setEditingProduct(product)}
+                            className="p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm"
+                          >
+                            <Plus size={16} className="rotate-45" />
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              const { error } = await supabase.from('products').delete().eq('id', product.id);
+                              if (!error) {
+                                setProducts(products.filter(p => p.id !== product.id));
+                                toast.success('Product deleted');
+                              }
+                            }}
+                            className="p-2 bg-white/90 backdrop-blur rounded-xl text-red-600 shadow-sm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                       <div className="p-4">
                         <h4 className="font-bold text-neutral-900">{product.name}</h4>
@@ -733,14 +818,31 @@ const QuickAddLink = ({ icon, label, onClick }: { icon: React.ReactNode, label: 
   </button>
 );
 
-const AddResourceForm = ({ onAdd }: { onAdd: (type: 'pdf' | 'video', title: string, url: string) => void }) => {
+const AddResourceForm = ({ onAdd, editingResource, onCancel }: { onAdd: (type: 'pdf' | 'video', title: string, url: string) => void, editingResource?: Resource | null, onCancel?: () => void }) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [type, setType] = useState<'pdf' | 'video'>('pdf');
 
+  useEffect(() => {
+    if (editingResource) {
+      setTitle(editingResource.title);
+      setUrl(editingResource.file_url);
+      setType(editingResource.type);
+    } else {
+      setTitle('');
+      setUrl('');
+      setType('pdf');
+    }
+  }, [editingResource]);
+
   return (
     <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100 space-y-4 md:col-span-2">
-      <h3 className="text-sm font-bold text-neutral-900">Add New Resource</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-bold text-neutral-900">{editingResource ? 'Edit Resource' : 'Add New Resource'}</h3>
+        {editingResource && (
+          <button onClick={onCancel} className="text-xs text-neutral-400 hover:text-neutral-600 font-bold">Cancel</button>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <select 
           value={type} 
@@ -765,22 +867,42 @@ const AddResourceForm = ({ onAdd }: { onAdd: (type: 'pdf' | 'video', title: stri
       </div>
       <button 
         onClick={() => { onAdd(type, title, url); setTitle(''); setUrl(''); }}
-        className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all"
+        className={cn(
+          "w-full py-3 text-white rounded-xl font-bold text-sm transition-all",
+          editingResource ? "bg-neutral-900 hover:bg-neutral-800" : "bg-blue-600 hover:bg-blue-700"
+        )}
       >
-        Add Resource
+        {editingResource ? 'Update Resource' : 'Add Resource'}
       </button>
     </div>
   );
 };
 
-const AddProductForm = ({ onAdd }: { onAdd: (name: string, description: string, image: string) => void }) => {
+const AddProductForm = ({ onAdd, editingProduct, onCancel }: { onAdd: (name: string, description: string, image: string) => void, editingProduct?: Product | null, onCancel?: () => void }) => {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [img, setImg] = useState('');
 
+  useEffect(() => {
+    if (editingProduct) {
+      setName(editingProduct.name);
+      setDesc(editingProduct.description);
+      setImg(editingProduct.image);
+    } else {
+      setName('');
+      setDesc('');
+      setImg('');
+    }
+  }, [editingProduct]);
+
   return (
     <div className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100 space-y-4">
-      <h3 className="text-sm font-bold text-neutral-900">Add Product/Service</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-bold text-neutral-900">{editingProduct ? 'Edit Product/Service' : 'Add Product/Service'}</h3>
+        {editingProduct && (
+          <button onClick={onCancel} className="text-xs text-neutral-400 hover:text-neutral-600 font-bold">Cancel</button>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input placeholder="Product Name" value={name} onChange={e => setName(e.target.value)} className="bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm outline-none" />
         <input placeholder="Image URL" value={img} onChange={e => setImg(e.target.value)} className="bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm outline-none" />
@@ -788,9 +910,12 @@ const AddProductForm = ({ onAdd }: { onAdd: (name: string, description: string, 
       </div>
       <button 
         onClick={() => { onAdd(name, desc, img); setName(''); setDesc(''); setImg(''); }}
-        className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all"
+        className={cn(
+          "w-full py-3 text-white rounded-xl font-bold text-sm transition-all",
+          editingProduct ? "bg-neutral-900 hover:bg-neutral-800" : "bg-blue-600 hover:bg-blue-700"
+        )}
       >
-        Add Product
+        {editingProduct ? 'Update Product' : 'Add Product'}
       </button>
     </div>
   );
