@@ -58,6 +58,9 @@ const AdminPanel = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Add a small delay for stability
+        await new Promise(res => setTimeout(res, 800));
+        
         const [empRes, leadsRes, analyticsRes] = await Promise.all([
           supabase.from('employees').select('*'),
           supabase.from('leads').select('*').order('created_at', { ascending: false }),

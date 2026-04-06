@@ -88,6 +88,9 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
+        // Add a small delay for stability
+        await new Promise(res => setTimeout(res, 800));
+        
         // Fetch employee safely
         let { data, error } = await supabase
           .from('employees')

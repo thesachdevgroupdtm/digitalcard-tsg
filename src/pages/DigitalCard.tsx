@@ -97,6 +97,9 @@ const DigitalCard = () => {
     const fetchData = async () => {
       console.log("fetchData function called for slug:", slug);
       try {
+        // Add a small delay for stability
+        await new Promise(res => setTimeout(res, 800));
+        
         const cleanSlug = slug?.trim().toLowerCase();
         console.log("Cleaned slug:", cleanSlug);
         
@@ -583,77 +586,79 @@ const DigitalCard = () => {
         )}
 
         {/* Inquiry Form */}
-        // <div className="mt-12 bg-white/5 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl relative overflow-hidden">
-        //   <div className="absolute top-0 left-0 w-1 h-full bg-[#EB0A1E]" />
-        //   <h3 className="text-3xl font-black mb-2 text-white">Get in Touch</h3>
-        //   <p className="text-neutral-500 text-sm mb-10 leading-relaxed font-medium">Have a question? Send me a message and I'll respond shortly.</p>
+        {/*
+        <div className="mt-12 bg-white/5 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[#EB0A1E]" />
+          <h3 className="text-3xl font-black mb-2 text-white">Get in Touch</h3>
+          <p className="text-neutral-500 text-sm mb-10 leading-relaxed font-medium">Have a question? Send me a message and I'll respond shortly.</p>
           
-        //   <AnimatePresence mode="wait">
-        //     {submitted ? (
-        //       <motion.div 
-        //         key="success"
-        //         initial={{ opacity: 0, scale: 0.9 }}
-        //         animate={{ opacity: 1, scale: 1 }}
-        //         exit={{ opacity: 0, scale: 0.9 }}
-        //         className="text-center py-12"
-        //       >
-        //         <div className="w-24 h-24 bg-green-500/10 text-green-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-xl">
-        //           <CheckCircle2 size={48} />
-        //         </div>
-        //         <h4 className="font-black text-2xl mb-3 text-white">Message Sent!</h4>
-        //         <p className="text-neutral-500 text-sm font-medium">Thank you for reaching out. I'll be in touch soon.</p>
-        //         <button 
-        //           onClick={() => setSubmitted(false)}
-        //           className="mt-10 bg-white/5 px-8 py-3 rounded-full text-[#EB0A1E] text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-        //         >
-        //           Send Another
-        //         </button>
-        //       </motion.div>
-        //     ) : (
-        //       <form onSubmit={handleLeadSubmit} className="space-y-5">
-        //         <div className="space-y-5">
-        //           <FormInput 
-        //             required
-        //             placeholder="Your Name" 
-        //             value={leadForm.name}
-        //             onChange={e => setLeadForm({...leadForm, name: e.target.value})}
-        //           />
-        //           <div className="grid grid-cols-1 gap-5">
-        //             <FormInput 
-        //               required
-        //               placeholder="Phone Number" 
-        //               value={leadForm.phone}
-        //               onChange={e => setLeadForm({...leadForm, phone: e.target.value})}
-        //             />
-        //             <FormInput 
-        //               required
-        //               type="email"
-        //               placeholder="Email Address" 
-        //               value={leadForm.email}
-        //               onChange={e => setLeadForm({...leadForm, email: e.target.value})}
-        //             />
-        //           </div>
-        //           <textarea 
-        //             required
-        //             placeholder="How can I help you?" 
-        //             value={leadForm.message}
-        //             onChange={e => setLeadForm({...leadForm, message: e.target.value})}
-        //             className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all min-h-[160px] resize-none text-white font-medium placeholder:text-neutral-700"
-        //           />
-        //         </div>
-        //         <motion.button 
-        //           whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(235, 10, 30, 0.4)' }}
-        //           whileTap={{ scale: 0.98 }}
-        //           type="submit"
-        //           className="w-full bg-gradient-to-r from-[#EB0A1E] to-[#8a0612] text-white py-6 rounded-full font-black text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl shadow-[#EB0A1E]/30"
-        //         >
-        //           <Send size={20} />
-        //           Send Message
-        //         </motion.button>
-        //       </form>
-        //     )}
-        //   </AnimatePresence>
-        // </div>
+          <AnimatePresence mode="wait">
+            {submitted ? (
+              <motion.div 
+                key="success"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="text-center py-12"
+              >
+                <div className="w-24 h-24 bg-green-500/10 text-green-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-xl">
+                  <CheckCircle2 size={48} />
+                </div>
+                <h4 className="font-black text-2xl mb-3 text-white">Message Sent!</h4>
+                <p className="text-neutral-500 text-sm font-medium">Thank you for reaching out. I'll be in touch soon.</p>
+                <button 
+                  onClick={() => setSubmitted(false)}
+                  className="mt-10 bg-white/5 px-8 py-3 rounded-full text-[#EB0A1E] text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Send Another
+                </button>
+              </motion.div>
+            ) : (
+              <form onSubmit={handleLeadSubmit} className="space-y-5">
+                <div className="space-y-5">
+                  <FormInput 
+                    required
+                    placeholder="Your Name" 
+                    value={leadForm.name}
+                    onChange={e => setLeadForm({...leadForm, name: e.target.value})}
+                  />
+                  <div className="grid grid-cols-1 gap-5">
+                    <FormInput 
+                      required
+                      placeholder="Phone Number" 
+                      value={leadForm.phone}
+                      onChange={e => setLeadForm({...leadForm, phone: e.target.value})}
+                    />
+                    <FormInput 
+                      required
+                      type="email"
+                      placeholder="Email Address" 
+                      value={leadForm.email}
+                      onChange={e => setLeadForm({...leadForm, email: e.target.value})}
+                    />
+                  </div>
+                  <textarea 
+                    required
+                    placeholder="How can I help you?" 
+                    value={leadForm.message}
+                    onChange={e => setLeadForm({...leadForm, message: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all min-h-[160px] resize-none text-white font-medium placeholder:text-neutral-700"
+                  />
+                </div>
+                <motion.button 
+                  whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(235, 10, 30, 0.4)' }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-[#EB0A1E] to-[#8a0612] text-white py-6 rounded-full font-black text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl shadow-[#EB0A1E]/30"
+                >
+                  <Send size={20} />
+                  Send Message
+                </motion.button>
+              </form>
+            )}
+          </AnimatePresence>
+        </div>
+        */}
 
         {/* Footer */}
         <div className="mt-24 text-center">

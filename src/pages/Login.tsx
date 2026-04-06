@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../AuthContext';
 
 const Login = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshAuth } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -58,6 +58,7 @@ const Login = () => {
 
         if (data.user && data.session) {
           toast.success('Registration successful! Redirecting...');
+          await refreshAuth();
           navigate('/dashboard');
         } else {
           toast.success('Registration successful! Please check your email for verification.');
@@ -78,6 +79,7 @@ const Login = () => {
         }
 
         toast.success('Login successful!');
+        await refreshAuth();
         navigate('/dashboard');
       }
     } catch (err: any) {
