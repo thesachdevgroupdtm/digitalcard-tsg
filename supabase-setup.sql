@@ -2,7 +2,8 @@
 -- Create tables if not exists
 
 create table if not exists employees (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null unique,
   name text,
   slug text unique,
   designation text,
@@ -73,13 +74,13 @@ drop policy if exists "Public read employees" on employees;
 create policy "Public read employees" on employees for select using (true);
 
 drop policy if exists "Users can update own employee profile" on employees;
-create policy "Users can update own employee profile" on employees for update using (auth.uid() = id);
+create policy "Users can update own employee profile" on employees for update using (auth.uid() = user_id);
 
 drop policy if exists "Users can insert own employee profile" on employees;
-create policy "Users can insert own employee profile" on employees for insert with check (auth.uid() = id);
+create policy "Users can insert own employee profile" on employees for insert with check (auth.uid() = user_id);
 
 drop policy if exists "Users can delete own employee profile" on employees;
-create policy "Users can delete own employee profile" on employees for delete using (auth.uid() = id);
+create policy "Users can delete own employee profile" on employees for delete using (auth.uid() = user_id);
 
 
 -- ==========================================
@@ -89,13 +90,19 @@ drop policy if exists "Public read links" on links;
 create policy "Public read links" on links for select using (true);
 
 drop policy if exists "Users can insert own links" on links;
-create policy "Users can insert own links" on links for insert with check (auth.uid() = employee_id);
+create policy "Users can insert own links" on links for insert with check (
+  exists (select 1 from employees where id = links.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can update own links" on links;
-create policy "Users can update own links" on links for update using (auth.uid() = employee_id);
+create policy "Users can update own links" on links for update using (
+  exists (select 1 from employees where id = links.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can delete own links" on links;
-create policy "Users can delete own links" on links for delete using (auth.uid() = employee_id);
+create policy "Users can delete own links" on links for delete using (
+  exists (select 1 from employees where id = links.employee_id and user_id = auth.uid())
+);
 
 
 -- ==========================================
@@ -105,13 +112,19 @@ drop policy if exists "Public read resources" on resources;
 create policy "Public read resources" on resources for select using (true);
 
 drop policy if exists "Users can insert own resources" on resources;
-create policy "Users can insert own resources" on resources for insert with check (auth.uid() = employee_id);
+create policy "Users can insert own resources" on resources for insert with check (
+  exists (select 1 from employees where id = resources.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can update own resources" on resources;
-create policy "Users can update own resources" on resources for update using (auth.uid() = employee_id);
+create policy "Users can update own resources" on resources for update using (
+  exists (select 1 from employees where id = resources.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can delete own resources" on resources;
-create policy "Users can delete own resources" on resources for delete using (auth.uid() = employee_id);
+create policy "Users can delete own resources" on resources for delete using (
+  exists (select 1 from employees where id = resources.employee_id and user_id = auth.uid())
+);
 
 
 -- ==========================================
@@ -121,13 +134,19 @@ drop policy if exists "Public read products" on products;
 create policy "Public read products" on products for select using (true);
 
 drop policy if exists "Users can insert own products" on products;
-create policy "Users can insert own products" on products for insert with check (auth.uid() = employee_id);
+create policy "Users can insert own products" on products for insert with check (
+  exists (select 1 from employees where id = products.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can update own products" on products;
-create policy "Users can update own products" on products for update using (auth.uid() = employee_id);
+create policy "Users can update own products" on products for update using (
+  exists (select 1 from employees where id = products.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can delete own products" on products;
-create policy "Users can delete own products" on products for delete using (auth.uid() = employee_id);
+create policy "Users can delete own products" on products for delete using (
+  exists (select 1 from employees where id = products.employee_id and user_id = auth.uid())
+);
 
 
 -- ==========================================
@@ -137,10 +156,14 @@ drop policy if exists "Public can insert leads" on leads;
 create policy "Public can insert leads" on leads for insert with check (true);
 
 drop policy if exists "Users can read own leads" on leads;
-create policy "Users can read own leads" on leads for select using (auth.uid() = employee_id);
+create policy "Users can read own leads" on leads for select using (
+  exists (select 1 from employees where id = leads.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can delete own leads" on leads;
-create policy "Users can delete own leads" on leads for delete using (auth.uid() = employee_id);
+create policy "Users can delete own leads" on leads for delete using (
+  exists (select 1 from employees where id = leads.employee_id and user_id = auth.uid())
+);
 
 
 -- ==========================================
@@ -150,7 +173,29 @@ drop policy if exists "Public can insert analytics" on analytics;
 create policy "Public can insert analytics" on analytics for insert with check (true);
 
 drop policy if exists "Users can read own analytics" on analytics;
-create policy "Users can read own analytics" on analytics for select using (auth.uid() = employee_id);
+create policy "Users can read own analytics" on analytics for select using (
+  exists (select 1 from employees where id = analytics.employee_id and user_id = auth.uid())
+);
 
 drop policy if exists "Users can delete own analytics" on analytics;
-create policy "Users can delete own analytics" on analytics for delete using (auth.uid() = employee_id);
+create policy "Users can delete own analytics" on analytics for delete using (
+  exists (select 1 from employees where id = analytics.employee_id and user_id = auth.uid())
+);
+
+-- ==========================================
+-- Storage policies for avatars
+-- ==========================================
+-- Note: These might need to be run separately if storage schema is not available in the same transaction
+-- insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true) on conflict (id) do nothing;
+
+-- drop policy if exists "Public Access" on storage.objects;
+-- create policy "Public Access" on storage.objects for select using (bucket_id = 'avatars');
+
+-- drop policy if exists "Authenticated users can upload avatars" on storage.objects;
+-- create policy "Authenticated users can upload avatars" on storage.objects for insert with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
+
+-- drop policy if exists "Users can update own avatar" on storage.objects;
+-- create policy "Users can update own avatar" on storage.objects for update using (bucket_id = 'avatars' and (name like auth.uid()::text || '-%'));
+
+-- drop policy if exists "Users can delete own avatar" on storage.objects;
+-- create policy "Users can delete own avatar" on storage.objects for delete using (bucket_id = 'avatars' and (name like auth.uid()::text || '-%'));

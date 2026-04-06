@@ -92,7 +92,7 @@ const Dashboard = () => {
         const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('id', authUser.id)
+          .eq('user_id', authUser.id)
           .single();
         
         if (!isMounted) return;
@@ -170,7 +170,7 @@ const Dashboard = () => {
         .from('employees')
         .select('id')
         .eq('slug', currentSlug)
-        .neq('id', user.id)
+        .neq('user_id', user.id)
         .maybeSingle();
       
       if (existing) {
@@ -184,8 +184,11 @@ const Dashboard = () => {
     }
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Not authenticated');
+
       const updateData = {
-        id: user.id,
+        user_id: authUser.id,
         name: profileForm.name || null,
         slug: currentSlug || null,
         email: profileForm.email || null,
@@ -200,7 +203,7 @@ const Dashboard = () => {
 
       const { data, error } = await supabase
         .from('employees')
-        .upsert(updateData, { onConflict: 'id' })
+        .upsert(updateData, { onConflict: 'user_id' })
         .select()
         .single();
       
@@ -251,8 +254,11 @@ const Dashboard = () => {
     const loadingToast = toast.loading('Uploading photo...');
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Not authenticated');
+
       await new Promise(res => setTimeout(res, 300));
-      const fileName = `${user.id}-${Date.now()}.jpg`;
+      const fileName = `${authUser.id}-${Date.now()}.jpg`;
       const filePath = fileName; 
 
       console.log('Uploading photo to avatars bucket:', filePath);
@@ -285,13 +291,13 @@ const Dashboard = () => {
       const { data: updatedEmp, error: updateError } = await supabase
         .from('employees')
         .upsert({ 
-          id: user.id,
+          user_id: authUser.id,
           photo: publicUrl,
           name: profileForm.name || employee?.name || null,
           slug: profileForm.slug || employee?.slug || null,
-          email: profileForm.email || employee?.email || user.email || null,
+          email: profileForm.email || employee?.email || authUser.email || null,
           status: 'active'
-        }, { onConflict: 'id' })
+        }, { onConflict: 'user_id' })
         .select()
         .single();
 
