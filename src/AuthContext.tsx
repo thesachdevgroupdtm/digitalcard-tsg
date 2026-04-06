@@ -25,18 +25,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
+    // Safety timeout to prevent infinite loading if Supabase hangs
+    const authTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn('Auth initialization timed out');
+        setLoading(false);
+      }
+    }, 8000);
+
     // Check active sessions and sets the user
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!isMounted) return;
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
 
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      if (currentUser) {
-        await fetchProfile(currentUser.id, currentUser.email || '');
-      } else {
-        setLoading(false);
+        if (error) {
+          console.error('Session error:', error);
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          await fetchProfile(currentUser.id, currentUser.email || '');
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Auth init failed:', err);
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -48,20 +71,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const currentUser = session?.user ?? null;
       
-      // Only update if user actually changed to avoid unnecessary re-renders
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
         setUser(currentUser);
         if (currentUser) {
           await fetchProfile(currentUser.id, currentUser.email || '');
-        } else {
-          setProfile(null);
-          setLoading(false);
         }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
       }
     });
 
     return () => {
       isMounted = false;
+      clearTimeout(authTimeout);
       subscription.unsubscribe();
     };
   }, []);

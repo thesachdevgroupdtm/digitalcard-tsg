@@ -81,7 +81,7 @@ const Dashboard = () => {
 
     const fetchData = async () => {
       if (!user) {
-        // If auth is still loading, wait
+        // If auth is still loading, wait. If auth finished and no user, ProtectedRoute will redirect.
         return;
       }
 
@@ -97,15 +97,15 @@ const Dashboard = () => {
         
         if (!isMounted) return;
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching employee:', error);
-          setLoading(false);
-          return;
-        }
-
-        if (!data) {
-          console.log('No profile found');
-          setEmployee(null);
+        if (error) {
+          if (error.code === 'PGRST116') {
+            // No profile found - this is okay, we'll show the "Complete Your Profile" UI
+            console.log('No profile found for user:', user.id);
+            setEmployee(null);
+          } else {
+            console.error('Error fetching employee:', error);
+            toast.error('Failed to load profile data');
+          }
           setLoading(false);
           return;
         }
