@@ -89,13 +89,39 @@ const Dashboard = () => {
         setLoading(true);
         
         // Fetch employee safely
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('employees')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (!isMounted) return;
+
+        // If not found by user_id, try by email to recover old data with incorrect user_id
+        if (!data && (!error || error.code === 'PGRST116')) {
+          console.log('Profile not found by user_id, trying email recovery...');
+          const { data: byEmail, error: emailErr } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('email', user.email)
+            .maybeSingle();
+          
+          if (byEmail && !emailErr) {
+            console.log('Found profile by email, claiming it...');
+            const { data: updated, error: updateErr } = await supabase
+              .from('employees')
+              .update({ user_id: user.id })
+              .eq('id', byEmail.id)
+              .select()
+              .single();
+            
+            if (!updateErr) {
+              data = updated;
+            } else {
+              console.error('Failed to claim profile by email:', updateErr);
+            }
+          }
+        }
 
         if (error) {
           if (error.code === 'PGRST116') {
@@ -122,11 +148,11 @@ const Dashboard = () => {
 
         // Fetch related data
         const [linksRes, resourcesRes, productsRes, leadsRes, analyticsRes] = await Promise.all([
-          supabase.from('links').select('*').eq('employee_id', data.id),
-          supabase.from('resources').select('*').eq('employee_id', data.id),
-          supabase.from('products').select('*').eq('employee_id', data.id),
-          supabase.from('leads').select('*').eq('employee_id', data.id).order('created_at', { ascending: false }),
-          supabase.from('analytics').select('*').eq('employee_id', data.id).order('created_at', { ascending: false })
+          supabase.from('links').select('*').eq('employee_id', user.id),
+          supabase.from('resources').select('*').eq('employee_id', user.id),
+          supabase.from('products').select('*').eq('employee_id', user.id),
+          supabase.from('leads').select('*').eq('employee_id', user.id).order('created_at', { ascending: false }),
+          supabase.from('analytics').select('*').eq('employee_id', user.id).order('created_at', { ascending: false })
         ]);
 
         if (!isMounted) return;
@@ -341,7 +367,7 @@ const Dashboard = () => {
     } else {
       const { data, error } = await supabase
         .from('links')
-        .insert([{ employee_id: employee.id, type, url }])
+        .insert([{ employee_id: user.id, type, url }])
         .select()
         .single();
       if (data) {
@@ -376,7 +402,7 @@ const Dashboard = () => {
     } else {
       const { data, error } = await supabase
         .from('resources')
-        .insert([{ employee_id: employee.id, type, title, file_url: url }])
+        .insert([{ employee_id: user.id, type, title, file_url: url }])
         .select()
         .single();
       if (data) {
@@ -403,7 +429,7 @@ const Dashboard = () => {
     } else {
       const { data, error } = await supabase
         .from('products')
-        .insert([{ employee_id: employee.id, name, description, image }])
+        .insert([{ employee_id: user.id, name, description, image }])
         .select()
         .single();
       if (data) {

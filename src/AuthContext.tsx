@@ -92,19 +92,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string, email: string) => {
     try {
-      // We are removing the 'users' table as requested and using 'employees' for profile data
-      const { data, error } = await supabase
+      // First try by user_id
+      let { data, error } = await supabase
         .from('employees')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
+      // If not found, try by email to recover old data with incorrect user_id
+      if (!data && !error) {
+        const { data: byEmail, error: emailErr } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+        
+        if (byEmail) {
+          console.log('Recovering old profile by email:', email);
+          // Found by email, update user_id to claim it and fix consistency
+          const { data: updated, error: updateErr } = await supabase
+            .from('employees')
+            .update({ user_id: userId })
+            .eq('id', byEmail.id)
+            .select()
+            .single();
+          
+          if (!updateErr) {
+            data = updated;
+          } else {
+            console.error('Failed to claim profile by email:', updateErr);
+          }
+        }
+      }
+
       if (data) {
-        // Map employee data to UserProfile if needed, or just use it as is
+        // Map employee data to UserProfile
         setProfile({
           id: data.user_id,
           email: data.email || email,
-          role: 'employee', // Default role since we removed the users table
+          role: 'employee',
         });
       } else {
         // If no employee profile exists yet, set a default profile

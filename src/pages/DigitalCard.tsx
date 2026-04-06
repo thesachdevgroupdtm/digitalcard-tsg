@@ -133,7 +133,7 @@ const DigitalCard = () => {
         // Track view
         try {
           await supabase.from('analytics').insert([{
-            employee_id: empData.id,
+            employee_id: empData.user_id,
             event_type: 'view',
             created_at: new Date().toISOString()
           }]);
@@ -146,9 +146,9 @@ const DigitalCard = () => {
         // Fetch related data
         console.log("Fetching related data (links, resources, products)...");
         const [linksRes, resourcesRes, productsRes] = await Promise.all([
-          supabase.from('links').select('*').eq('employee_id', empData.id),
-          supabase.from('resources').select('*').eq('employee_id', empData.id),
-          supabase.from('products').select('*').eq('employee_id', empData.id)
+          supabase.from('links').select('*').eq('employee_id', empData.user_id),
+          supabase.from('resources').select('*').eq('employee_id', empData.user_id),
+          supabase.from('products').select('*').eq('employee_id', empData.user_id)
         ]);
 
         if (!isMounted) return;
@@ -163,6 +163,9 @@ const DigitalCard = () => {
         console.error("Error loading card:", err);
         if (isMounted) {
           setEmployee(null);
+        }
+      } finally {
+        if (isMounted) {
           setLoading(false);
         }
       }
@@ -176,7 +179,7 @@ const DigitalCard = () => {
     if (!employee) return;
     try {
       await supabase.from('analytics').insert([{
-        employee_id: employee.id,
+        employee_id: employee.user_id,
         event_type: 'click',
         created_at: new Date().toISOString(),
         metadata: { button: type }
@@ -191,7 +194,7 @@ const DigitalCard = () => {
     if (!employee) return;
     try {
       const { error } = await supabase.from('leads').insert([{
-        employee_id: employee.id,
+        employee_id: employee.user_id,
         ...leadForm,
         created_at: new Date().toISOString()
       }]);
