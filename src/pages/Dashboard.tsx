@@ -71,28 +71,28 @@ const Dashboard = () => {
 
   useEffect(() => {
     let isMounted = true;
+    
+    // Safety timeout to prevent stuck loading
     const timeout = setTimeout(() => {
-      if (isMounted && loading && !user) {
+      if (isMounted && loading) {
         setLoading(false);
       }
     }, 5000);
 
     const fetchData = async () => {
+      if (!user) {
+        // If auth is still loading, wait
+        return;
+      }
+
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setLoading(true);
         
-        if (!isMounted) return;
-
-        if (!authUser) {
-          navigate('/login');
-          return;
-        }
-
         // Fetch employee safely
         const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('user_id', authUser.id)
+          .eq('user_id', user.id)
           .single();
         
         if (!isMounted) return;
@@ -149,7 +149,7 @@ const Dashboard = () => {
       isMounted = false;
       clearTimeout(timeout);
     };
-  }, [user, navigate]);
+  }, [user?.id, navigate]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();

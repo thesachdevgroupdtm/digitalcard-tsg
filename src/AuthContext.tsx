@@ -23,30 +23,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id, session.user.email || '');
-      } else {
-        setLoading(false);
-      }
-    });
+    let isMounted = true;
 
-    // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Check active sessions and sets the user
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
       if (currentUser) {
         await fetchProfile(currentUser.id, currentUser.email || '');
       } else {
-        setProfile(null);
         setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
+      const currentUser = session?.user ?? null;
+      
+      // Only update if user actually changed to avoid unnecessary re-renders
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfile(currentUser.id, currentUser.email || '');
+        } else {
+          setProfile(null);
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string, email: string) => {
@@ -55,13 +72,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (data) {
         // Map employee data to UserProfile if needed, or just use it as is
         setProfile({
-          id: data.id,
+          id: data.user_id,
           email: data.email || email,
           role: 'employee', // Default role since we removed the users table
         });

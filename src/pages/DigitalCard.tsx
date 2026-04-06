@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabasePublic } from '../supabase';
+import { supabase } from '../supabase';
 import { Employee, Link, Resource, Product } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -101,7 +101,7 @@ const DigitalCard = () => {
         console.log("Cleaned slug:", cleanSlug);
         
         console.log("Calling Supabase for employee data...");
-        const { data, error } = await supabasePublic
+        const { data, error } = await supabase
           .from('employees')
           .select('*')
           .eq('slug', cleanSlug)
@@ -132,7 +132,7 @@ const DigitalCard = () => {
 
         // Track view
         try {
-          await supabasePublic.from('analytics').insert([{
+          await supabase.from('analytics').insert([{
             employee_id: empData.id,
             event_type: 'view',
             created_at: new Date().toISOString()
@@ -146,9 +146,9 @@ const DigitalCard = () => {
         // Fetch related data
         console.log("Fetching related data (links, resources, products)...");
         const [linksRes, resourcesRes, productsRes] = await Promise.all([
-          supabasePublic.from('links').select('*').eq('employee_id', empData.id),
-          supabasePublic.from('resources').select('*').eq('employee_id', empData.id),
-          supabasePublic.from('products').select('*').eq('employee_id', empData.id)
+          supabase.from('links').select('*').eq('employee_id', empData.id),
+          supabase.from('resources').select('*').eq('employee_id', empData.id),
+          supabase.from('products').select('*').eq('employee_id', empData.id)
         ]);
 
         if (!isMounted) return;
@@ -175,7 +175,7 @@ const DigitalCard = () => {
   const trackClick = async (type: string) => {
     if (!employee) return;
     try {
-      await supabasePublic.from('analytics').insert([{
+      await supabase.from('analytics').insert([{
         employee_id: employee.id,
         event_type: 'click',
         created_at: new Date().toISOString(),
@@ -190,7 +190,7 @@ const DigitalCard = () => {
     e.preventDefault();
     if (!employee) return;
     try {
-      const { error } = await supabasePublic.from('leads').insert([{
+      const { error } = await supabase.from('leads').insert([{
         employee_id: employee.id,
         ...leadForm,
         created_at: new Date().toISOString()
