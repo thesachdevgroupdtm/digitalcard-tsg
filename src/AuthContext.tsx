@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
 import { UserProfile } from './types';
@@ -8,6 +8,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -15,83 +16,21 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   isAdmin: false,
+  signOut: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    // Safety timeout to prevent infinite loading if Supabase hangs
-    const authTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.warn('Auth initialization timed out');
-        setLoading(false);
-      }
-    }, 8000);
-
-    // Check active sessions and sets the user
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-
-        if (error) {
-          console.error('Session error:', error);
-          await supabase.auth.signOut();
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        
-        if (currentUser) {
-          await fetchProfile(currentUser.id, currentUser.email || '');
-        } else {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Auth init failed:', err);
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return;
-
-      const currentUser = session?.user ?? null;
-      
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id, currentUser.email || '');
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      clearTimeout(authTimeout);
-      subscription.unsubscribe();
-    };
-  }, []);
+  const isAuthRunning = useRef(false);
+  const isInitialized = useRef(false);
 
   const fetchProfile = async (userId: string, email: string) => {
     try {
+      // Add a slight delay before DB calls for stability as requested
+      await new Promise(res => setTimeout(res, 500));
+
       // First try by user_id
       let { data, error } = await supabase
         .from('employees')
@@ -147,10 +86,110 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      // Clear any local storage that might be causing issues
+      localStorage.removeItem('sb-auth-token');
+      localStorage.clear();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Safety timeout to prevent infinite loading if Supabase hangs
+    const authTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn('Auth initialization timed out');
+        setLoading(false);
+      }
+    }, 8000);
+
+    const handleAuthChange = async (session: any) => {
+      if (!isMounted || isAuthRunning.current) return;
+      isAuthRunning.current = true;
+
+      try {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          await fetchProfile(currentUser.id, currentUser.email || '');
+        } else {
+          setProfile(null);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Auth change handling failed:', err);
+        if (isMounted) setLoading(false);
+      } finally {
+        if (isMounted) isAuthRunning.current = false;
+      }
+    };
+
+    // Check active sessions and sets the user
+    const initAuth = async () => {
+      if (isInitialized.current) return;
+      isInitialized.current = true;
+
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('Session error:', error);
+          await signOut();
+          return;
+        }
+
+        await handleAuthChange(session);
+      } catch (err) {
+        console.error('Auth init failed:', err);
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        await handleAuthChange(session);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      clearTimeout(authTimeout);
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const isAdmin = profile?.role === 'admin' || user?.email === 'dtm@thesachdevgroup.com';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, profile, loading, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );

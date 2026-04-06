@@ -45,7 +45,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
@@ -465,7 +465,7 @@ const Dashboard = () => {
             Create Profile
           </button>
           <button 
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => signOut()}
             className="mt-4 text-sm font-bold text-neutral-400 hover:text-neutral-600 transition-all"
           >
             Sign Out
@@ -497,7 +497,7 @@ const Dashboard = () => {
 
         <div className="p-4 border-t border-neutral-100">
           <button 
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => signOut()}
             className="w-full flex items-center gap-3 px-4 py-3 text-neutral-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
           >
             <LogOut size={18} />
