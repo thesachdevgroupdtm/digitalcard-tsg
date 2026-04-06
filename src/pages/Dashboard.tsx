@@ -92,7 +92,7 @@ const Dashboard = () => {
         const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('user_id', authUser.id)
+          .eq('id', authUser.id)
           .single();
         
         if (!isMounted) return;
@@ -170,7 +170,7 @@ const Dashboard = () => {
         .from('employees')
         .select('id')
         .eq('slug', currentSlug)
-        .neq('user_id', user.id)
+        .neq('id', user.id)
         .maybeSingle();
       
       if (existing) {
@@ -185,7 +185,7 @@ const Dashboard = () => {
 
     try {
       const updateData = {
-        user_id: user.id,
+        id: user.id,
         name: profileForm.name || null,
         slug: currentSlug || null,
         email: profileForm.email || null,
@@ -200,7 +200,7 @@ const Dashboard = () => {
 
       const { data, error } = await supabase
         .from('employees')
-        .upsert(updateData, { onConflict: 'user_id' })
+        .upsert(updateData, { onConflict: 'id' })
         .select()
         .single();
       
@@ -285,13 +285,13 @@ const Dashboard = () => {
       const { data: updatedEmp, error: updateError } = await supabase
         .from('employees')
         .upsert({ 
-          user_id: user.id,
+          id: user.id,
           photo: publicUrl,
           name: profileForm.name || employee?.name || null,
           slug: profileForm.slug || employee?.slug || null,
           email: profileForm.email || employee?.email || user.email || null,
           status: 'active'
-        }, { onConflict: 'user_id' })
+        }, { onConflict: 'id' })
         .select()
         .single();
 

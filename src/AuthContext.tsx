@@ -55,13 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
 
       if (data) {
         // Map employee data to UserProfile if needed, or just use it as is
         setProfile({
-          id: data.user_id,
+          id: data.id,
           email: data.email || email,
           role: 'employee', // Default role since we removed the users table
         });
