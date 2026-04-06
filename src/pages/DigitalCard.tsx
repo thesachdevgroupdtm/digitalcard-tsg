@@ -36,20 +36,30 @@ import { cn } from '../lib/utils';
 // Lazy load sections for performance
 const ProductSection = lazy(() => Promise.resolve({ default: ({ products }: { products: Product[] }) => (
   <div className="mt-12">
-    <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-6 px-2">Products & Services</h3>
-    <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
+    <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-6 px-2">Products & Services</h3>
+    <div className="flex overflow-x-auto gap-6 pb-6 no-scrollbar snap-x px-2">
       {products.map(product => (
         <motion.div 
-          whileHover={{ y: -5 }}
+          whileHover={{ y: -10 }}
           key={product.id} 
-          className="min-w-[280px] bg-neutral-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden border border-white/5 hover:border-[#EB0A1E]/30 transition-all snap-center shadow-xl"
+          className="min-w-[300px] bg-white/5 backdrop-blur-xl rounded-[2.5rem] overflow-hidden border border-white/10 hover:border-[#EB0A1E]/30 transition-all snap-center shadow-2xl group"
         >
-          <div className="aspect-[4/3] bg-neutral-800/50">
-            {product.image && <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" />}
+          <div className="aspect-[4/3] bg-neutral-900 overflow-hidden">
+            {product.image && (
+              <img 
+                src={product.image} 
+                alt={product.name} 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                loading="lazy" 
+              />
+            )}
           </div>
-          <div className="p-6">
-            <h4 className="font-bold text-lg mb-2 text-white">{product.name}</h4>
-            <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">{product.description}</p>
+          <div className="p-8">
+            <h4 className="font-black text-xl mb-3 text-white group-hover:text-[#EB0A1E] transition-colors">{product.name}</h4>
+            <p className="text-neutral-500 text-sm leading-relaxed line-clamp-3 font-medium">{product.description}</p>
+            <div className="mt-6 flex items-center gap-2 text-[#EB0A1E] font-black text-[10px] uppercase tracking-widest">
+              View Details <ArrowRight size={14} />
+            </div>
           </div>
         </motion.div>
       ))}
@@ -270,11 +280,17 @@ const DigitalCard = () => {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-[#EB0A1E] selection:text-white relative overflow-x-hidden">
-      {/* Premium Background Elements */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#EB0A1E]/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#EB0A1E]/10 blur-[120px] rounded-full" />
-        <div className="absolute top-[30%] right-[10%] w-[20%] h-[20%] bg-[#EB0A1E]/5 blur-[80px] rounded-full" />
+      {/* Premium Layered Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Base Black Layer */}
+        <div className="absolute inset-0 bg-black" />
+        
+        {/* Red Radial Glows */}
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-[#EB0A1E]/15 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-[#EB0A1E]/15 blur-[150px] rounded-full animate-pulse" style={{ animationDuration: '10s' }} />
+        
+        {/* Subtle Noise Texture Overlay */}
+        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       </div>
 
       {/* Floating Action Buttons */}
@@ -320,139 +336,177 @@ const DigitalCard = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-[40vh] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#EB0A1E]/20 via-black/60 to-black z-10" />
+      <div className="relative h-[45vh] overflow-hidden">
+        {/* Diagonal Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-black/80 to-[#EB0A1E]/40 z-10" />
+        
+        {/* Brand Label */}
+        <div className="absolute top-12 left-0 right-0 z-20 flex justify-center">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-white/40 text-[10px] font-black tracking-[0.8em] uppercase"
+          >
+            Galaxy Toyota
+          </motion.div>
+        </div>
+
         {employee.photo ? (
           <motion.img 
             initial={{ scale: 1.2, opacity: 0 }}
-            animate={{ scale: 1.1, opacity: 0.4 }}
-            transition={{ duration: 1.5 }}
+            animate={{ scale: 1.1, opacity: 0.3 }}
+            transition={{ duration: 2 }}
             src={employee.photo} 
             alt={employee.name} 
-            className="w-full h-full object-cover blur-xl" 
+            className="w-full h-full object-cover grayscale" 
           />
         ) : (
           <div className="w-full h-full bg-neutral-900" />
         )}
       </div>
 
-      <div className="max-w-md mx-auto px-6 -mt-32 relative z-20 pb-32">
-        {/* Profile Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-neutral-900/40 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl text-center relative overflow-hidden"
-        >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#EB0A1E] to-transparent opacity-50" />
-          
-          <div className="relative inline-block mb-8">
+      <div className="max-w-md mx-auto px-6 -mt-40 relative z-20 pb-32">
+        {/* Profile Section */}
+        <div className="flex flex-col items-center text-center mb-10">
+          <div className="relative mb-8">
+            {/* Animated Glow behind profile */}
             <motion.div 
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              whileHover={{ scale: 1.05 }}
-              className="w-36 h-36 rounded-full bg-neutral-800 overflow-hidden border-4 border-neutral-900 shadow-[0_0_30px_rgba(235,10,30,0.3)] mx-auto relative z-10"
+              animate={{ 
+                scale: [1, 1.15, 1],
+                opacity: [0.3, 0.6, 0.3]
+              }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full bg-[#EB0A1E] blur-[40px] -z-10"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ 
+                scale: 1, 
+                opacity: 1,
+                y: [0, -10, 0] 
+              }}
+              transition={{ 
+                opacity: { duration: 0.5 },
+                scale: { duration: 0.5 },
+                y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
+              }}
+              className="w-40 h-40 rounded-full bg-neutral-900 border-[6px] border-white shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden relative z-10"
             >
               {employee.photo ? (
                 <img src={employee.photo} alt={employee.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-neutral-700">
-                  <User size={72} />
+                  <User size={80} />
                 </div>
               )}
             </motion.div>
-            <motion.div 
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-0 rounded-full bg-[#EB0A1E]/20 blur-xl -z-0"
-            />
-            <div className="absolute -bottom-1 -right-1 bg-[#EB0A1E] p-2.5 rounded-full shadow-xl border-4 border-neutral-900 z-20">
-              <CheckCircle2 size={18} className="text-white" />
+            
+            <div className="absolute -bottom-1 -right-1 bg-[#EB0A1E] p-3 rounded-full shadow-xl border-4 border-black z-20">
+              <CheckCircle2 size={20} className="text-white" />
             </div>
           </div>
 
-          <h1 className="text-3xl font-black tracking-tight mb-2 text-white">{employee.name}</h1>
-          <p className="text-neutral-400 font-bold text-xs uppercase tracking-[0.4em] mb-6">{employee.designation}</p>
-          
-          <div className="bg-white/5 rounded-2xl p-4 mb-8 border border-white/5">
-            <p className="text-neutral-400 text-sm leading-relaxed italic">"{employee.about || 'Welcome to my digital business card.'}"</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h1 className="text-4xl font-black tracking-tight mb-2 text-white drop-shadow-sm">{employee.name}</h1>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-[#EB0A1E] font-black text-xs uppercase tracking-[0.4em]">{employee.designation}</p>
+              <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest">Galaxy Toyota</p>
+            </div>
+          </motion.div>
+        </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <ActionButton icon={<Phone />} label="Call" href={`tel:${employee.phone}`} onClick={() => trackClick('call')} />
-            <ActionButton icon={<Mail />} label="Email" href={`mailto:${employee.email}`} onClick={() => trackClick('email')} />
-            <ActionButton icon={<MessageSquare />} label="WhatsApp" href={`https://wa.me/${employee.phone.replace(/\D/g,'')}?text=${encodeURIComponent("Hi, I found your digital card and would like to connect.")}`} onClick={() => trackClick('whatsapp')} />
-          </div>
-        </motion.div>
-
-        {/* CTA Section */}
-        <div className="mt-8 space-y-3">
+        {/* Primary Action Buttons */}
+        <div className="grid grid-cols-1 gap-4 mb-12">
           <motion.button 
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(235, 10, 30, 0.4)' }}
             whileTap={{ scale: 0.98 }}
             onClick={downloadVCard}
-            className="w-full flex items-center justify-between bg-gradient-to-r from-[#EB0A1E] to-[#c40819] text-white p-5 rounded-full font-bold text-sm group transition-all shadow-xl shadow-[#EB0A1E]/20 relative overflow-hidden"
+            className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-[#EB0A1E] to-[#8a0612] text-white py-5 rounded-full font-black text-sm transition-all shadow-2xl shadow-[#EB0A1E]/30"
           >
-            <motion.div 
-              animate={{ x: ['-100%', '200%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
-            />
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <Download size={20} />
-              </div>
-              Save to Contacts
-            </div>
-            <ArrowRight size={18} className="text-white/50 group-hover:translate-x-1 transition-transform relative z-10" />
+            <Download size={20} />
+            SAVE CONTACT
           </motion.button>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button 
+          
+          <div className="grid grid-cols-2 gap-4">
+            <motion.button 
+              whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.1)' }}
+              whileTap={{ scale: 0.98 }}
               onClick={shareCard}
-              className="flex items-center justify-center gap-3 bg-neutral-900/60 backdrop-blur-xl border border-white/10 p-5 rounded-full font-bold text-sm hover:bg-neutral-800 transition-all shadow-lg"
+              className="flex items-center justify-center gap-3 bg-white/5 backdrop-blur-xl border border-white/10 py-5 rounded-full font-black text-xs uppercase tracking-widest transition-all"
             >
               <Share2 size={18} className="text-[#EB0A1E]" />
               Share
-            </button>
-            <button 
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.1)' }}
+              whileTap={{ scale: 0.98 }}
               onClick={copyToClipboard}
-              className="flex items-center justify-center gap-3 bg-neutral-900/60 backdrop-blur-xl border border-white/10 p-5 rounded-full font-bold text-sm hover:bg-neutral-800 transition-all shadow-lg"
+              className="flex items-center justify-center gap-3 bg-white/5 backdrop-blur-xl border border-white/10 py-5 rounded-full font-black text-xs uppercase tracking-widest transition-all"
             >
               {copySuccess ? <CheckCircle2 size={18} className="text-green-500" /> : <Copy size={18} className="text-neutral-400" />}
-              {copySuccess ? 'Copied!' : 'Copy Link'}
-            </button>
+              {copySuccess ? 'Copied' : 'Link'}
+            </motion.button>
           </div>
         </div>
 
-        {/* QR Code Section */}
-        <div className="mt-12 bg-white rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center text-center">
-          <h3 className="text-black text-xs font-black uppercase tracking-[0.3em] mb-6">Scan to Save Contact</h3>
-          <div className="p-4 bg-neutral-50 rounded-3xl border border-neutral-100 shadow-inner">
-            <QRCodeSVG 
-              value={window.location.href} 
-              size={160} 
-              includeMargin={false}
-              level="H"
-            />
+        {/* Contact Info Cards */}
+        <div className="space-y-4 mb-12">
+          <ContactCard 
+            icon={<Phone className="text-white" />} 
+            label="Phone" 
+            value={employee.phone} 
+            href={`tel:${employee.phone}`}
+            onClick={() => trackClick('call_card')}
+            iconBg="bg-blue-600"
+          />
+          <ContactCard 
+            icon={<Mail className="text-white" />} 
+            label="Email" 
+            value={employee.email} 
+            href={`mailto:${employee.email}`}
+            onClick={() => trackClick('email_card')}
+            iconBg="bg-purple-600"
+          />
+          <ContactCard 
+            icon={<MessageSquare className="text-white" />} 
+            label="WhatsApp" 
+            value="Message me" 
+            href={`https://wa.me/${employee.phone.replace(/\D/g,'')}?text=${encodeURIComponent("Hi, I found your digital card and would like to connect.")}`}
+            onClick={() => trackClick('whatsapp_card')}
+            iconBg="bg-green-600"
+          />
+        </div>
+
+        {/* About Section */}
+        <div className="mb-12">
+          <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-4 px-2">About Me</h3>
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border-l-4 border-[#EB0A1E] shadow-xl">
+            <p className="text-neutral-400 text-sm leading-[1.8] font-medium">
+              {employee.about || 'Passionate professional at Galaxy Toyota, dedicated to providing exceptional service and automotive expertise to our valued clients.'}
+            </p>
           </div>
-          <p className="text-neutral-400 text-[10px] mt-6 font-bold uppercase tracking-widest">Digital Business Card</p>
         </div>
 
         {/* Social Links */}
         {links.length > 0 && (
-          <div className="mt-12">
-            <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-6 px-2">Digital Presence</h3>
-            <div className="grid grid-cols-4 gap-4">
+          <div className="mb-12">
+            <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-6 px-2">Social Connect</h3>
+            <div className="flex flex-wrap justify-center gap-6">
               {links.map(link => (
                 <motion.a 
-                  whileHover={{ y: -5, scale: 1.1 }}
+                  whileHover={{ scale: 1.2, boxShadow: '0 0 20px rgba(235, 10, 30, 0.3)' }}
                   whileTap={{ scale: 0.9 }}
                   key={link.id} 
                   href={link.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   onClick={() => trackClick(`social_${link.type}`)}
-                  className="aspect-square bg-neutral-900/40 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center border border-white/10 hover:bg-neutral-800 hover:border-[#EB0A1E]/50 hover:shadow-[0_0_15px_rgba(235,10,30,0.2)] transition-all"
+                  className="w-14 h-14 bg-white/5 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:border-[#EB0A1E]/50 transition-all"
                 >
                   {getLinkIcon(link.type)}
                 </motion.a>
@@ -460,6 +514,26 @@ const DigitalCard = () => {
             </div>
           </div>
         )}
+
+        {/* QR Code Section */}
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="bg-white rounded-[2rem] p-10 shadow-2xl flex flex-col items-center text-center border-2 border-transparent hover:border-[#EB0A1E]/10 transition-all"
+        >
+          <h3 className="text-black text-sm font-black uppercase tracking-[0.3em] mb-8">Scan to Connect</h3>
+          <div className="p-6 bg-neutral-50 rounded-3xl border border-neutral-100 shadow-inner">
+            <QRCodeSVG 
+              value={window.location.href} 
+              size={180} 
+              includeMargin={false}
+              level="H"
+            />
+          </div>
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <p className="text-black font-black text-xs uppercase tracking-widest">Digital Business Card</p>
+            <p className="text-neutral-400 text-[9px] font-bold uppercase tracking-[0.2em]">Galaxy Toyota Official</p>
+          </div>
+        </motion.div>
 
         {/* Products Section */}
         {products.length > 0 && (
@@ -471,31 +545,34 @@ const DigitalCard = () => {
         {/* Resources Section */}
         {resources.length > 0 && (
           <div className="mt-12">
-            <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-6 px-2">Documents & Media</h3>
-            <div className="space-y-3">
+            <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-6 px-2">Documents & Media</h3>
+            <div className="space-y-4">
               {resources.map(res => (
                 <motion.a 
-                  whileHover={{ x: 5 }}
+                  whileHover={{ x: 10, backgroundColor: 'rgba(255,255,255,0.08)' }}
+                  whileTap={{ scale: 0.98 }}
                   key={res.id} 
                   href={res.file_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   onClick={() => trackClick(`resource_${res.type}`)}
-                  className="flex items-center justify-between p-6 bg-neutral-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 hover:bg-neutral-800 hover:border-[#EB0A1E]/30 transition-all group shadow-lg"
+                  className="flex items-center justify-between p-6 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 hover:border-[#EB0A1E]/30 transition-all group shadow-xl"
                 >
-                  <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-6">
                     <div className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center",
-                      res.type === 'pdf' ? "bg-red-500/10 text-red-500" : "bg-[#EB0A1E]/10 text-[#EB0A1E]"
+                      "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg",
+                      res.type === 'pdf' ? "bg-red-600 text-white" : "bg-[#EB0A1E] text-white"
                     )}>
                       {res.type === 'pdf' ? <FileText size={24} /> : <Video size={24} />}
                     </div>
                     <div>
-                      <p className="font-bold text-sm group-hover:text-[#EB0A1E] transition-colors text-white">{res.title}</p>
-                      <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-1">{res.type}</p>
+                      <p className="font-black text-base group-hover:text-[#EB0A1E] transition-colors text-white">{res.title}</p>
+                      <p className="text-[10px] text-neutral-500 uppercase font-black tracking-widest mt-1">{res.type}</p>
                     </div>
                   </div>
-                  <ChevronRight size={18} className="text-neutral-700 group-hover:text-white transition-all" />
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#EB0A1E] transition-all">
+                    <ChevronRight size={18} className="text-neutral-600 group-hover:text-white transition-all" />
+                  </div>
                 </motion.a>
               ))}
             </div>
@@ -503,9 +580,10 @@ const DigitalCard = () => {
         )}
 
         {/* Inquiry Form */}
-        <div className="mt-12 bg-neutral-900/40 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl">
-          <h3 className="text-2xl font-black mb-2 text-white">Get in Touch</h3>
-          <p className="text-neutral-500 text-sm mb-8 leading-relaxed">Have a question? Send me a message and I'll respond shortly.</p>
+        <div className="mt-12 bg-white/5 backdrop-blur-3xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[#EB0A1E]" />
+          <h3 className="text-3xl font-black mb-2 text-white">Get in Touch</h3>
+          <p className="text-neutral-500 text-sm mb-10 leading-relaxed font-medium">Have a question? Send me a message and I'll respond shortly.</p>
           
           <AnimatePresence mode="wait">
             {submitted ? (
@@ -514,30 +592,30 @@ const DigitalCard = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="text-center py-10"
+                className="text-center py-12"
               >
-                <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 size={40} />
+                <div className="w-24 h-24 bg-green-500/10 text-green-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-xl">
+                  <CheckCircle2 size={48} />
                 </div>
-                <h4 className="font-bold text-xl mb-2 text-white">Message Sent!</h4>
-                <p className="text-neutral-500 text-sm">Thank you for reaching out. I'll be in touch soon.</p>
+                <h4 className="font-black text-2xl mb-3 text-white">Message Sent!</h4>
+                <p className="text-neutral-500 text-sm font-medium">Thank you for reaching out. I'll be in touch soon.</p>
                 <button 
                   onClick={() => setSubmitted(false)}
-                  className="mt-8 text-[#EB0A1E] text-sm font-bold uppercase tracking-widest hover:text-[#c40819] transition-colors"
+                  className="mt-10 bg-white/5 px-8 py-3 rounded-full text-[#EB0A1E] text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
                 >
                   Send Another
                 </button>
               </motion.div>
             ) : (
-              <form onSubmit={handleLeadSubmit} className="space-y-4">
-                <div className="space-y-4">
+              <form onSubmit={handleLeadSubmit} className="space-y-5">
+                <div className="space-y-5">
                   <FormInput 
                     required
                     placeholder="Your Name" 
                     value={leadForm.name}
                     onChange={e => setLeadForm({...leadForm, name: e.target.value})}
                   />
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-5">
                     <FormInput 
                       required
                       placeholder="Phone Number" 
@@ -557,16 +635,16 @@ const DigitalCard = () => {
                     placeholder="How can I help you?" 
                     value={leadForm.message}
                     onChange={e => setLeadForm({...leadForm, message: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all min-h-[140px] resize-none text-white"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all min-h-[160px] resize-none text-white font-medium placeholder:text-neutral-700"
                   />
                 </div>
                 <motion.button 
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(235, 10, 30, 0.4)' }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="w-full bg-[#EB0A1E] text-white py-5 rounded-full font-bold flex items-center justify-center gap-3 hover:bg-[#c40819] transition-all shadow-xl shadow-[#EB0A1E]/20"
+                  className="w-full bg-gradient-to-r from-[#EB0A1E] to-[#8a0612] text-white py-6 rounded-full font-black text-sm uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl shadow-[#EB0A1E]/30"
                 >
-                  <Send size={18} />
+                  <Send size={20} />
                   Send Message
                 </motion.button>
               </form>
@@ -575,54 +653,56 @@ const DigitalCard = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-20 text-center">
-          <div className="w-12 h-1 bg-gradient-to-r from-transparent via-[#EB0A1E]/30 to-transparent mx-auto mb-8" />
-          <p className="text-neutral-600 text-[10px] uppercase tracking-[0.5em] mb-4">Official Digital Card of</p>
-          <h2 className="text-2xl font-black text-white/10 tracking-tighter italic">GALAXY TOYOTA</h2>
-          <p className="text-neutral-700 text-[10px] mt-8">© 2026 All Rights Reserved</p>
+        <div className="mt-24 text-center">
+          <div className="w-16 h-1 bg-gradient-to-r from-transparent via-[#EB0A1E] to-transparent mx-auto mb-10" />
+          <p className="text-neutral-600 text-[9px] font-black uppercase tracking-[0.6em] mb-6">Official Digital Card</p>
+          <h2 className="text-3xl font-black text-white/5 tracking-[-0.05em] uppercase italic">Galaxy Toyota</h2>
+          <p className="text-neutral-800 text-[9px] font-bold mt-10 uppercase tracking-widest">© 2026 All Rights Reserved</p>
         </div>
       </div>
 
       {/* QR Modal */}
       <AnimatePresence>
         {showQR && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/98 backdrop-blur-xl">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[3rem] p-12 max-w-sm w-full relative text-center shadow-2xl"
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="bg-white rounded-[3rem] p-12 max-w-sm w-full relative text-center shadow-[0_30px_100px_rgba(0,0,0,0.8)]"
             >
               <button 
                 onClick={() => setShowQR(false)}
-                className="absolute top-8 right-8 p-2 text-neutral-300 hover:text-neutral-900 transition-all"
+                className="absolute top-10 right-10 p-2 text-neutral-300 hover:text-black transition-all"
               >
-                <X size={28} />
+                <X size={32} />
               </button>
-              <h3 className="text-black text-2xl font-black mb-2">Scan Me</h3>
-              <p className="text-neutral-500 text-sm mb-10">Point your camera to instantly view my digital card.</p>
+              <h3 className="text-black text-3xl font-black mb-3 tracking-tight">Scan to Connect</h3>
+              <p className="text-neutral-500 text-sm mb-12 font-medium">Point your camera to instantly view my digital card.</p>
               
-              <div className="bg-neutral-50 p-8 rounded-[2.5rem] inline-block mb-10 shadow-inner border border-neutral-100">
+              <div className="bg-neutral-50 p-10 rounded-[3rem] inline-block mb-12 shadow-inner border border-neutral-100">
                 <QRCodeSVG 
                   value={window.location.href} 
-                  size={200} 
+                  size={220} 
                   includeMargin={false}
                   level="H"
                 />
               </div>
               
-              <div className="space-y-1">
-                <p className="text-black font-bold text-lg">{employee.name}</p>
-                <p className="text-neutral-400 text-xs uppercase tracking-widest">{employee.designation}</p>
+              <div className="space-y-2">
+                <p className="text-black font-black text-2xl tracking-tight">{employee.name}</p>
+                <p className="text-[#EB0A1E] font-black text-[10px] uppercase tracking-[0.3em]">{employee.designation}</p>
               </div>
 
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={shareToWhatsApp}
-                className="mt-10 w-full bg-green-500 text-white py-4 rounded-full font-bold text-sm flex items-center justify-center gap-3 shadow-lg shadow-green-500/20"
+                className="mt-12 w-full bg-green-500 text-white py-5 rounded-full font-black text-xs uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl shadow-green-500/30"
               >
-                <MessageSquare size={18} />
+                <MessageSquare size={20} />
                 Share on WhatsApp
-              </button>
+              </motion.button>
             </motion.div>
           </div>
         )}
@@ -648,10 +728,29 @@ const ActionButton = ({ icon, label, href, onClick }: { icon: React.ReactNode, l
   </motion.a>
 );
 
+const ContactCard = ({ icon, label, value, href, onClick, iconBg }: { icon: React.ReactNode, label: string, value: string, href: string, onClick: () => void, iconBg: string }) => (
+  <motion.a 
+    whileHover={{ y: -5, backgroundColor: 'rgba(255,255,255,0.08)' }}
+    whileTap={{ scale: 0.98 }}
+    href={href}
+    onClick={onClick}
+    className="flex items-center gap-5 p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 transition-all shadow-lg group"
+  >
+    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110", iconBg)}>
+      {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+    </div>
+    <div className="flex-1">
+      <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">{label}</p>
+      <p className="text-sm font-bold text-white group-hover:text-[#EB0A1E] transition-colors">{value}</p>
+    </div>
+    <ChevronRight size={18} className="text-neutral-700 group-hover:text-white transition-all" />
+  </motion.a>
+);
+
 const FormInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input 
     {...props}
-    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all text-white placeholder:text-neutral-600"
+    className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm outline-none focus:border-[#EB0A1E] focus:bg-white/10 transition-all text-white font-medium placeholder:text-neutral-700"
   />
 );
 

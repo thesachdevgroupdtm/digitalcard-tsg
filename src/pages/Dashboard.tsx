@@ -606,6 +606,8 @@ const Dashboard = () => {
                   <QuickAddLink icon={<Facebook />} label="Facebook" onClick={() => addLink('facebook', 'https://facebook.com/')} />
                 </div>
 
+                <AddLinkForm onAdd={addLink} editingLink={editingLink} onCancel={() => setEditingLink(null)} />
+
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold text-neutral-900">Your Links</h3>
                   {links.length === 0 ? (
@@ -625,10 +627,14 @@ const Dashboard = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <button 
-                              onClick={() => setEditingLink(link)} 
+                              onClick={() => {
+                                setEditingLink(link);
+                                // Scroll to form
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }} 
                               className="p-2 text-neutral-400 hover:text-blue-600 transition-all"
                             >
-                              <Plus size={18} className="rotate-45" /> {/* Using Plus as Edit icon for simplicity or I could use Edit from lucide */}
+                              <Plus size={18} className="rotate-45" />
                             </button>
                             <button onClick={() => deleteLink(link.id)} className="p-2 text-neutral-400 hover:text-red-600 transition-all">
                               <Trash2 size={18} />
@@ -817,6 +823,71 @@ const QuickAddLink = ({ icon, label, onClick }: { icon: React.ReactNode, label: 
     <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</span>
   </button>
 );
+
+const AddLinkForm = ({ onAdd, editingLink, onCancel }: { onAdd: (type: string, url: string) => void, editingLink?: Link | null, onCancel?: () => void }) => {
+  const [type, setType] = useState('website');
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    if (editingLink) {
+      setType(editingLink.type);
+      setUrl(editingLink.url);
+    } else {
+      setType('website');
+      setUrl('');
+    }
+  }, [editingLink]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url) return;
+    onAdd(type, url);
+    if (!editingLink) {
+      setUrl('');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-neutral-50 p-6 rounded-3xl border border-neutral-100 space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-bold text-neutral-900">{editingLink ? 'Edit Link' : 'Add Custom Link'}</h3>
+        {editingLink && (
+          <button type="button" onClick={onCancel} className="text-xs text-neutral-400 hover:text-neutral-600 font-bold">Cancel</button>
+        )}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <select 
+          value={type} 
+          onChange={e => setType(e.target.value)}
+          className="bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm outline-none"
+        >
+          <option value="website">Website</option>
+          <option value="instagram">Instagram</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="twitter">Twitter</option>
+          <option value="facebook">Facebook</option>
+          <option value="youtube">YouTube</option>
+          <option value="github">GitHub</option>
+        </select>
+        <input 
+          placeholder="URL (e.g. https://...)" 
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          className="bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm outline-none"
+        />
+      </div>
+      <button 
+        type="submit"
+        className={cn(
+          "w-full py-3 text-white rounded-xl font-bold text-sm transition-all",
+          editingLink ? "bg-neutral-900 hover:bg-neutral-800" : "bg-blue-600 hover:bg-blue-700"
+        )}
+      >
+        {editingLink ? 'Update Link' : 'Add Link'}
+      </button>
+    </form>
+  );
+};
 
 const AddResourceForm = ({ onAdd, editingResource, onCancel }: { onAdd: (type: 'pdf' | 'video', title: string, url: string) => void, editingResource?: Resource | null, onCancel?: () => void }) => {
   const [title, setTitle] = useState('');
